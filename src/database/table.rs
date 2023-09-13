@@ -219,7 +219,7 @@ mod tests {
     #[test]
     fn export_none() {
         let database: Database<u32, u32> = Database::new();
-        let mut table = database.empty_table();
+        let table = database.empty_table();
 
         let mut transaction = TableTransaction::new();
         for (key, value) in (0..1024).map(|i| (i, i)) {
@@ -240,7 +240,7 @@ mod tests {
     #[test]
     fn export_single() {
         let database: Database<u32, u32> = Database::new();
-        let mut table = database.empty_table();
+        let table = database.empty_table();
 
         let mut transaction = TableTransaction::new();
         for (key, value) in (0..1024).map(|i| (i, i)) {
@@ -261,7 +261,7 @@ mod tests {
     #[test]
     fn export_half() {
         let database: Database<u32, u32> = Database::new();
-        let mut table = database.empty_table();
+        let table = database.empty_table();
 
         let mut transaction = TableTransaction::new();
         for (key, value) in (0..1024).map(|i| (i, i)) {
@@ -283,7 +283,7 @@ mod tests {
     #[test]
     fn export_all() {
         let database: Database<u32, u32> = Database::new();
-        let mut table = database.empty_table();
+        let table = database.empty_table();
 
         let mut transaction = TableTransaction::new();
         for (key, value) in (0..1024).map(|i| (i, i)) {

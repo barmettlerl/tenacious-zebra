@@ -215,7 +215,7 @@ mod tests {
     fn test_if_table_is_correct_after_execution_of_operations() {
         let database: Database<u32, u32> = Database::new();
 
-        let mut table = database.table_with_records((0..256).map(|i| (i, i)));
+        let table = database.table_with_records((0..256).map(|i| (i, i)));
 
         let mut transaction = TableTransaction::new();
         for i in 128..256 {

@@ -4,7 +4,7 @@ use crate::{
         tree::{Direction, Path},
     },
     database::store::{Label, Node, Split, Store},
-    map::{store::{Internal as MapInternal, Leaf as MapLeaf, Node as MapNode, Wrap as MapWrap}, Map},
+    map::store::{Internal as MapInternal, Leaf as MapLeaf, Node as MapNode, Wrap as MapWrap},
 };
 
 use oh_snap::Snap;

@@ -834,7 +834,7 @@ mod tests {
         let bob: Database<u32, u32> = Database::new();
 
         let original = alice.table_with_records((0..256).map(|i| (i, i)));
-        let mut sender = original.send();
+        let sender = original.send();
 
         let receiver = bob.receive();
 
@@ -863,7 +863,7 @@ mod tests {
         let bob: Database<u32, u32> = Database::new();
 
         let original = alice.table_with_records((0..100).map(|i| (i, i)));
-        let mut sender = original.send();
+        let sender = original.send();
 
         let receiver = bob.receive();
 
@@ -897,7 +897,7 @@ mod tests {
         let bob: Database<u32, u32> = Database::new();
 
         let original = alice.table_with_records((0..100).map(|i| (i, i)));
-        let mut sender = original.send();
+        let sender = original.send();
 
         let receiver = bob.receive();
 
@@ -931,7 +931,7 @@ mod tests {
         let bob: Database<u32, u32> = Database::new();
 
         let original = alice.table_with_records((0..100).map(|i| (i, i)));
-        let mut sender = original.send();
+        let sender = original.send();
 
         let receiver = bob.receive();
 
@@ -1041,7 +1041,7 @@ mod tests {
         let bob: Database<u32, u32> = Database::new();
 
         let original = alice.table_with_records((4..=5).map(|i| (i, i)));
-        let mut sender = original.send();
+        let sender = original.send();
         let receiver = bob.receive();
         let mut answer = sender.hello();
 
@@ -1064,7 +1064,7 @@ mod tests {
         let bob: Database<u32, u32> = Database::new();
 
         let original = alice.table_with_records((0..1).map(|i| (i, i)));
-        let mut sender = original.send();
+        let sender = original.send();
         let receiver = bob.receive();
         let mut answer = sender.hello();
 
@@ -1104,7 +1104,7 @@ mod tests {
         };
 
         let original = alice.table_with_records((0..128).map(|i| (i, i)));
-        let mut sender = original.send();
+        let sender = original.send();
 
         let receiver = bob.receive();
         let mut answer = sender.hello();
@@ -1153,7 +1153,7 @@ mod tests {
         };
 
         let original = alice.table_with_records((0..128).map(|i| (i, i)));
-        let mut sender = original.send();
+        let sender = original.send();
 
         let receiver = bob.receive();
         let mut answer = sender.hello();
