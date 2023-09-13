@@ -93,7 +93,7 @@ where
     /// }
     /// ```
     pub fn execute(
-        &mut self,
+        &self,
         transaction: TableTransaction<Key, Value>,
     ) -> TableResponse<Key, Value> {
         let (tid, batch) = transaction.finalize();
@@ -101,7 +101,7 @@ where
         TableResponse::new(tid, batch)
     }
 
-    pub fn export<I, K>(&mut self, keys: I) -> Result<Map<Key, Value>, Top<QueryError>>
+    pub fn export<I, K>(&self, keys: I) -> Result<Map<Key, Value>, Top<QueryError>>
     // TODO: Decide if a `QueryError` is appropriate here
     where
         Key: Clone,
@@ -127,14 +127,14 @@ where
     }
 
     pub fn diff(
-        lho: &mut Table<Key, Value>,
-        rho: &mut Table<Key, Value>,
+        lho: &Table<Key, Value>,
+        rho: &Table<Key, Value>,
     ) -> HashMap<Key, (Option<Value>, Option<Value>)>
     where
         Key: Clone + Eq + StdHash,
         Value: Clone + Eq,
     {
-        Handle::diff(&mut lho.0, &mut rho.0)
+        Handle::diff(&lho.0, & rho.0)
     }
 
     /// Transforms the table into a [`TableSender`], preparing it for sending to
@@ -152,8 +152,8 @@ where
     ///
     /// // Use sender...
     /// ```
-    pub fn send(self) -> TableSender<Key, Value> {
-        TableSender::from_handle(self.0)
+    pub fn send(&self) -> TableSender<Key, Value> {
+        TableSender::from_handle(self.0.clone())
     }
 }
 
@@ -181,12 +181,12 @@ mod tests {
         Value: Field,
     {
         pub(crate) fn root(&self) -> Label {
-            self.0.root
+            self.0.root.read().unwrap().clone()
         }
 
         pub(crate) fn check_tree(&self) {
             let mut store = self.0.cell.take();
-            store.check_tree(self.0.root);
+            store.check_tree(self.0.root.read().unwrap().clone());
             self.0.cell.restore(store);
         }
 
@@ -197,7 +197,7 @@ mod tests {
             I: IntoIterator<Item = (Key, Value)>,
         {
             let mut store = self.0.cell.take();
-            store.assert_records(self.0.root, reference);
+            store.assert_records(self.0.root.read().unwrap().clone(), reference);
             self.0.cell.restore(store);
         }
     }
@@ -205,7 +205,7 @@ mod tests {
     #[test]
     fn export_empty() {
         let database: Database<u32, u32> = Database::new();
-        let mut table = database.empty_table();
+        let table = database.empty_table();
 
         let map = table.export::<[u32; 0], u32>([]).unwrap(); // Explicit type arguments are to aid type inference on an empty array
 
@@ -271,6 +271,8 @@ mod tests {
         table.execute(transaction);
 
         let map = table.export(0..512).unwrap();
+        println!("{:?}", map);
+
         map.check_tree();
         map.assert_records((0..512).map(|i| (i, i)));
 

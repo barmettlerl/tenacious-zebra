@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{
     common::store::Field,
     database::{
@@ -21,7 +23,7 @@ where
         let status = self.0.learn(answer)?;
 
         let status = match status {
-            TableStatus::Complete(table) => CollectionStatus::Complete(Collection(table)),
+            TableStatus::Complete(table) => CollectionStatus::Complete(Collection(Arc::new(table))),
             TableStatus::Incomplete(receiver, question) => {
                 CollectionStatus::Incomplete(CollectionReceiver(receiver), question)
             }

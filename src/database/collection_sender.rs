@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{
     common::store::Field,
     database::{errors::SyncError, Collection, CollectionAnswer, Question, TableSender},
@@ -11,18 +13,18 @@ impl<Item> CollectionSender<Item>
 where
     Item: Field,
 {
-    pub fn hello(&mut self) -> CollectionAnswer<Item> {
+    pub fn hello(&self) -> CollectionAnswer<Item> {
         self.0.hello()
     }
 
     pub fn answer(
-        &mut self,
+        &self,
         question: &Question,
     ) -> Result<CollectionAnswer<Item>, Top<SyncError>> {
         self.0.answer(question)
     }
 
     pub fn end(self) -> Collection<Item> {
-        Collection(self.0.end())
+        Collection(Arc::new(self.0.end()))
     }
 }

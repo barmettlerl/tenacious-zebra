@@ -23,12 +23,13 @@ where
         TableSender(handle)
     }
 
-    pub fn hello(&mut self) -> TableAnswer<Key, Value> {
-        self.answer(&Question(vec![self.0.root])).unwrap()
+    pub fn hello(&self) -> TableAnswer<Key, Value> {
+        let root = self.0.root.read().unwrap().clone();
+        self.answer(&Question(vec![root])).unwrap()
     }
 
     pub fn answer(
-        &mut self,
+        &self,
         question: &Question,
     ) -> Result<TableAnswer<Key, Value>, Top<SyncError>> {
         let mut collector: Vec<Node<Key, Value>> = Vec::new();
@@ -96,7 +97,7 @@ mod tests {
         let database: Database<u32, u32> = Database::new();
         let table = database.empty_table();
 
-        let mut send = table.send();
+        let send = table.send();
 
         let answer = send.answer(&Question(vec![Label::Empty])).unwrap();
 
@@ -108,7 +109,7 @@ mod tests {
         let database: Database<u32, u32> = Database::new();
         let table = database.empty_table();
 
-        let mut send = table.send();
+        let send = table.send();
         let leaf = leaf!(1u32, 1u32);
         let leaf_label = Label::Leaf(MapId::leaf(&wrap!(1u32).digest()), leaf.hash());
 
@@ -127,8 +128,8 @@ mod tests {
         let database: Database<u32, u32> = Database::new();
         let table = database.table_with_records([(0u32, 0u32)]);
 
-        let mut send = table.send();
-        let label = send.0.root;
+        let send = table.send();
+        let label = send.0.root.read().unwrap().clone();
 
         let mut store = database.store.take();
         let node = match store.entry(label) {
@@ -147,8 +148,8 @@ mod tests {
         let database: Database<u32, u32> = Database::new();
         let table = database.table_with_records([(0u32, 0u32), (4u32, 4u32)]);
 
-        let mut send = table.send();
-        let label0 = send.0.root;
+        let send = table.send();
+        let label0 = send.0.root.read().unwrap().clone();
 
         let mut store = database.store.take();
         let n0 = match store.entry(label0) {

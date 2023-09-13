@@ -3,11 +3,11 @@ use crate::{
     database::{CollectionResponse, CollectionSender, CollectionTransaction, Table},
 };
 
-use std::{collections::HashSet, hash::Hash as StdHash};
+use std::{collections::HashSet, hash::Hash as StdHash, sync::Arc};
 
 use talk::crypto::primitives::hash::Hash;
 
-pub struct Collection<Item: Field>(pub(crate) Table<Item, ()>);
+pub struct Collection<Item: Field>(pub(crate) Arc<Table<Item, ()>>);
 
 impl<Item> Collection<Item>
 where
@@ -38,7 +38,7 @@ where
         let mut lho_minus_rho = HashSet::new();
         let mut rho_minus_lho = HashSet::new();
 
-        for (key, (in_lho, _)) in Table::diff(&mut lho.0, &mut rho.0) {
+        for (key, (in_lho, _)) in Table::diff(&lho.0, &rho.0) {
             if in_lho.is_some() {
                 lho_minus_rho.insert(key);
             } else {

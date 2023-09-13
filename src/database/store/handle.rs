@@ -12,14 +12,14 @@ use oh_snap::Snap;
 use std::{
     collections::{hash_map::Entry, HashMap},
     hash::Hash as StdHash,
-    ptr,
+    ptr, sync::RwLock,
 };
 
 use talk::crypto::primitives::hash::Hash;
 
 pub(crate) struct Handle<Key: Field, Value: Field> {
     pub cell: Cell<Key, Value>,
-    pub root: Label,
+    pub root: RwLock<Label>,
 }
 
 impl<Key, Value> Handle<Key, Value>
@@ -30,45 +30,44 @@ where
     pub fn empty(cell: Cell<Key, Value>) -> Self {
         Handle {
             cell,
-            root: Label::Empty,
+            root: RwLock::new(Label::Empty),
         }
     }
 
     pub fn new(cell: Cell<Key, Value>, root: Label) -> Self {
-        Handle { cell, root }
+        Handle { cell, root: RwLock::new(root) }
     }
 
     pub fn commit(&self) -> Hash {
-        self.root.hash().into()
+        self.root.read().unwrap().hash().into()
     }
 
-    pub fn apply(&mut self, batch: Batch<Key, Value>) -> Batch<Key, Value> {
-        let root = self.root;
+    pub fn apply(&self, batch: Batch<Key, Value>) -> Batch<Key, Value> {
         let store = self.cell.take();
 
-        let (store, root, batch) = apply::apply(store, root, batch);
+        let (store, root, batch) = apply::apply(store, self.root.read().unwrap().clone(), batch);
 
         self.cell.restore(store);
-        self.root = root;
+        *self.root.write().unwrap() = root;
 
         batch
     }
 
-    pub fn export(&mut self, paths: Snap<Path>) -> MapNode<Key, Value>
+    pub fn export(&self, paths: Snap<Path>) -> MapNode<Key, Value>
     where
         Key: Clone,
         Value: Clone,
     {
         let store = self.cell.take();
-        let (store, root) = export::export(store, self.root, paths);
+        let (store, root) = export::export(store, self.root.read().unwrap().clone(), paths);
         self.cell.restore(store);
 
         root
     }
 
     pub fn diff(
-        lho: &mut Handle<Key, Value>,
-        rho: &mut Handle<Key, Value>,
+        lho: &Handle<Key, Value>,
+        rho: &Handle<Key, Value>,
     ) -> HashMap<Key, (Option<Value>, Option<Value>)>
     where
         Key: Clone + Eq + StdHash,
@@ -80,7 +79,7 @@ where
 
         let store = lho.cell.take();
 
-        let (store, lho_candidates, rho_candidates) = diff::diff(store, lho.root, rho.root);
+        let (store, lho_candidates, rho_candidates) = diff::diff(store, lho.root.read().unwrap().clone(), rho.root.read().unwrap().clone());
 
         lho.cell.restore(store);
 
@@ -122,12 +121,12 @@ where
 {
     fn clone(&self) -> Self {
         let mut store = self.cell.take();
-        store.incref(self.root);
+        store.incref(self.root.read().unwrap().clone());
         self.cell.restore(store);
 
         Handle {
             cell: self.cell.clone(),
-            root: self.root,
+            root: RwLock::new(self.root.read().unwrap().clone()),
         }
     }
 }
@@ -139,7 +138,7 @@ where
 {
     fn drop(&mut self) {
         let mut store = self.cell.take();
-        drop::drop(&mut store, self.root);
+        drop::drop(&mut store, self.root.read().unwrap().clone());
         self.cell.restore(store);
     }
 }

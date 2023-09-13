@@ -1,3 +1,5 @@
+use std::sync::{RwLock, Arc};
+
 use crate::{
     common::store::Field,
     database::{
@@ -83,6 +85,7 @@ where
     Value: Field,
 {
     pub(crate) store: Cell<Key, Value>,
+    pub(crate) tables: RwLock<Vec<Arc<Table<Key, Value>>>>,
 }
 
 impl<Key, Value> Database<Key, Value>
@@ -101,6 +104,7 @@ where
     pub fn new() -> Self {
         Database {
             store: Cell::new(AtomicLender::new(Store::new())),
+            tables: RwLock::new(Vec::new()),
         }
     }
 
@@ -114,8 +118,10 @@ where
     ///
     /// let table = database.empty_table();
     /// ```
-    pub fn empty_table(&self) -> Table<Key, Value> {
-        Table::empty(self.store.clone())
+    pub fn empty_table(&self) -> Arc<Table<Key, Value>> {
+        let table = Arc::new(Table::empty(self.store.clone()));
+        self.tables.write().unwrap().push(table.clone());
+        table
     }
 
     /// Creates a [`TableReceiver`] assigned to this `Database`. The
@@ -140,6 +146,7 @@ where
     }
 }
 
+// QUESTION: Can we still make a shallow copy
 impl<Key, Value> Clone for Database<Key, Value>
 where
     Key: Field,
@@ -148,6 +155,7 @@ where
     fn clone(&self) -> Self {
         Database {
             store: self.store.clone(),
+            tables: RwLock::new(self.tables.read().unwrap().clone()),
         }
     }
 }
@@ -163,7 +171,7 @@ mod tests {
         Key: Field,
         Value: Field,
     {
-        pub(crate) fn table_with_records<I>(&self, records: I) -> Table<Key, Value>
+        pub(crate) fn table_with_records<I>(&self, records: I) -> Arc<Table<Key, Value>>
         where
             I: IntoIterator<Item = (Key, Value)>,
         {
@@ -217,7 +225,7 @@ mod tests {
         let _ = table.execute(transaction);
         table.assert_records((0..256).map(|i| (i, if i < 128 { i } else { i + 1 })));
 
-        database.check([&table], []);
+        database.check([table.as_ref()], []);
     }
 
     #[test]
@@ -235,11 +243,11 @@ mod tests {
         table.assert_records((0..256).map(|i| (i, if i < 128 { i } else { i + 1 })));
         table_clone.assert_records((0..256).map(|i| (i, i)));
 
-        database.check([&table, &table_clone], []);
+        database.check([table.as_ref(), table.as_ref()], []);
         drop(table_clone);
 
         table.assert_records((0..256).map(|i| (i, if i < 128 { i } else { i + 1 })));
-        database.check([&table], []);
+        database.check([table.as_ref()], []);
     }
 
     #[test]
@@ -257,10 +265,10 @@ mod tests {
         table_clone.assert_records((0..256).map(|i| (i, if i < 128 { i } else { i + 1 })));
         table.assert_records((0..256).map(|i| (i, i)));
 
-        database.check([&table, &table_clone], []);
+        database.check([table.as_ref(), table.as_ref()], []);
         drop(table_clone);
 
         table.assert_records((0..256).map(|i| (i, i)));
-        database.check([&table], []);
+        database.check([table.as_ref()], []);
     }
 }
