@@ -146,7 +146,6 @@ where
     }
 }
 
-// QUESTION: Can we still make a shallow copy
 impl<Key, Value> Clone for Database<Key, Value>
 where
     Key: Field,
@@ -175,7 +174,7 @@ mod tests {
         where
             I: IntoIterator<Item = (Key, Value)>,
         {
-            let mut table = self.empty_table();
+            let table = self.empty_table();
             let mut transaction = TableTransaction::new();
 
             for (key, value) in records {
@@ -186,7 +185,7 @@ mod tests {
             table
         }
 
-        pub(crate) fn check<'a, I, J>(&self, tables: I, receivers: J)
+        pub(crate) fn check_correctness<'a, I, J>(&self, tables: I, receivers: J)
         where
             I: IntoIterator<Item = &'a Table<Key, Value>>,
             J: IntoIterator<Item = &'a TableReceiver<Key, Value>>,
@@ -213,7 +212,7 @@ mod tests {
     }
 
     #[test]
-    fn modify_basic() {
+    fn test_if_table_is_correct_after_execution_of_operations() {
         let database: Database<u32, u32> = Database::new();
 
         let mut table = database.table_with_records((0..256).map(|i| (i, i)));
@@ -225,14 +224,14 @@ mod tests {
         let _ = table.execute(transaction);
         table.assert_records((0..256).map(|i| (i, if i < 128 { i } else { i + 1 })));
 
-        database.check([table.as_ref()], []);
+        database.check_correctness([table.as_ref()], []);
     }
 
     #[test]
-    fn clone_modify_original() {
+    fn test_if_changes_are_seen_when_clone_of_table_is_modified() {
         let database: Database<u32, u32> = Database::new();
 
-        let mut table = database.table_with_records((0..256).map(|i| (i, i)));
+        let table = database.table_with_records((0..256).map(|i| (i, i)));
         let table_clone = table.clone();
 
         let mut transaction = TableTransaction::new();
@@ -240,35 +239,51 @@ mod tests {
             transaction.set(i, i + 1).unwrap();
         }
         let _response = table.execute(transaction);
+        table_clone.assert_records((0..256).map(|i| (i, if i < 128 { i } else { i + 1 })));
         table.assert_records((0..256).map(|i| (i, if i < 128 { i } else { i + 1 })));
-        table_clone.assert_records((0..256).map(|i| (i, i)));
-
-        database.check([table.as_ref(), table.as_ref()], []);
-        drop(table_clone);
-
-        table.assert_records((0..256).map(|i| (i, if i < 128 { i } else { i + 1 })));
-        database.check([table.as_ref()], []);
     }
 
     #[test]
-    fn clone_modify_drop() {
+    fn test_if_len_is_correct_when_database_contains_zero_elements() {
+        let database: Database<u32, u32> = Database::new();
+        let tables = database.tables.read().unwrap();
+
+        assert_eq!(tables.len(), 0)
+    }
+
+    #[test]
+    fn test_if_len_is_correct_when_database_contains_one_element() {
+        let database: Database<u32, u32> = Database::new();
+
+        database.empty_table();
+
+        let tables = database.tables.read().unwrap();
+
+        assert_eq!(tables.len(), 1)
+    }
+
+    #[test]
+    fn test_if_database_sees_changes_made_on_table() {
         let database: Database<u32, u32> = Database::new();
 
         let table = database.table_with_records((0..256).map(|i| (i, i)));
-        let mut table_clone = table.clone();
+
+        {
+            let tables = database.tables.read().unwrap();
+            assert_eq!(tables[0].root(), table.root())
+        }
 
         let mut transaction = TableTransaction::new();
         for i in 128..256 {
             transaction.set(i, i + 1).unwrap();
         }
-        let _response = table_clone.execute(transaction);
-        table_clone.assert_records((0..256).map(|i| (i, if i < 128 { i } else { i + 1 })));
-        table.assert_records((0..256).map(|i| (i, i)));
 
-        database.check([table.as_ref(), table.as_ref()], []);
-        drop(table_clone);
+        table.execute(transaction);
 
-        table.assert_records((0..256).map(|i| (i, i)));
-        database.check([table.as_ref()], []);
+        {
+            let tables = database.tables.read().unwrap();
+            assert_eq!(tables[0].root(), table.root())
+        }
+
     }
 }

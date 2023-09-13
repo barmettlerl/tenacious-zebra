@@ -354,7 +354,7 @@ mod tests {
 
             let tables = tables.clone().into_iter().chain(received);
 
-            database.check(tables, receivers);
+            database.check_correctness(tables, receivers);
 
             if transfers.iter().all(|transfer| {
                 if let Transfer::Complete(..) = transfer {
@@ -793,7 +793,7 @@ mod tests {
             Transfer::Complete(table) => table,
         };
 
-        bob.check([&first], []);
+        bob.check_correctness([&first], []);
         first.assert_records((128..384).map(|i| (i, i)));
     }
 
@@ -824,7 +824,7 @@ mod tests {
             Transfer::Complete(table) => table,
         };
 
-        bob.check([&first], []);
+        bob.check_correctness([&first], []);
         first.assert_records((0..256).map(|i| (i, i)));
     }
 
@@ -991,7 +991,7 @@ mod tests {
             Transfer::Complete(table) => table,
         };
 
-        bob.check([&first], []);
+        bob.check_correctness([&first], []);
         first.assert_records((0..256).map(|i| (i, i)));
     }
 
@@ -1031,7 +1031,7 @@ mod tests {
             Transfer::Complete(table) => table,
         };
 
-        bob.check([&first], []);
+        bob.check_correctness([&first], []);
         first.assert_records((0..256).map(|i| (i, i)));
     }
 
@@ -1120,7 +1120,7 @@ mod tests {
             _ => panic!("Receiver accepts too many benign faults from sender"),
         }
 
-        bob.check([&first], []);
+        bob.check_correctness([&first], []);
         first.assert_records((0..256).map(|i| (i, i)));
     }
 
@@ -1175,7 +1175,7 @@ mod tests {
             _ => panic!("Receiver accepts too many benign faults from sender"),
         }
 
-        bob.check([&first], []);
+        bob.check_correctness([&first], []);
         first.assert_records((0..256).map(|i| (i, i)));
     }
 }
