@@ -1,5 +1,5 @@
-use std::sync::{RwLock, Arc};
-
+use std::{sync::{RwLock, Arc}, path::Path, io::Write};
+use serde_json;
 use crate::{
     common::store::Field,
     database::{
@@ -144,6 +144,26 @@ where
     pub fn receive(&self) -> TableReceiver<Key, Value> {
         TableReceiver::new(self.store.clone())
     }
+
+    pub fn backup(&self, folder_path: &str){
+        
+        if !Path::new(folder_path).exists() {
+            std::fs::create_dir(folder_path).unwrap();
+        }
+
+        let mut file = std::fs::File::create(format!("{}/store.json", folder_path)).unwrap();
+        let store = self.store.take();
+        let store_str = serde_json::to_string(&store).unwrap();
+        self.store.restore(store);
+
+        file.write_all(store_str.as_bytes()).unwrap();
+        
+        let mut file = std::fs::File::create(format!("{}/tables.json", folder_path)).unwrap();
+        let tables = self.tables.write().unwrap();
+        let tables_str = serde_json::to_string(&tables.clone()).unwrap();
+        file.write_all(tables_str.as_bytes()).unwrap();
+    }
+    
 }
 
 impl<Key, Value> Clone for Database<Key, Value>

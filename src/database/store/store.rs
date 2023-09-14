@@ -3,6 +3,8 @@ use crate::{
     database::store::{Entry, Label, MapId, Node, Split},
 };
 
+use serde::{Serialize, Serializer, ser::SerializeStruct};
+
 use oh_snap::Snap;
 
 use std::{
@@ -13,7 +15,7 @@ use std::{
         },
         HashMap,
     },
-    iter,
+    iter::{self, FromIterator},
 };
 
 pub(crate) type EntryMap<Key, Value> = HashMap<Bytes, Entry<Key, Value>>;
@@ -159,6 +161,26 @@ where
         } else {
             None
         }
+    }
+
+}
+
+impl<Key, Value> Serialize for Store<Key, Value>
+where
+    Key: Field,
+    Value: Field,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut store = serializer.serialize_struct("Store", 2)?;
+        let converted_maps = self.maps.iter()
+            .map(|submap| Vec::from_iter(submap.iter().map(|entry| (entry.0, entry.1))));
+        
+        store.serialize_field("maps", &Vec::from_iter(converted_maps))?;
+        store.serialize_field("scope", &self.scope)?;
+        store.end()
     }
 }
 

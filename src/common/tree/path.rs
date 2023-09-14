@@ -2,9 +2,10 @@ use crate::common::{data::Bytes, tree::Direction};
 
 use std::ops::Index;
 
+use serde::{Serialize, Deserialize};
 use talk::crypto::primitives::hash::{Hash, HASH_LENGTH};
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub(crate) struct Path(Bytes);
 
 pub(crate) const EMPTY_PATH: Bytes = Bytes([0; HASH_LENGTH]);

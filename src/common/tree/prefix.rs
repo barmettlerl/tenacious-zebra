@@ -1,8 +1,10 @@
+use serde::{Serialize, Deserialize};
+
 use crate::common::tree::{Direction, Path, PathIterator};
 
 use std::{iter::Take, ops::Index};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub(crate) struct Prefix {
     path: Path,
     depth: u8,
