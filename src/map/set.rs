@@ -15,7 +15,10 @@ use std::{
 use talk::crypto::primitives::hash::Hash;
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct Set<Item: Field>(Map<Item, ()>);
+pub struct Set<Item: Field>(
+    #[serde(bound(deserialize = "Map<Item, ()>: Deserialize<'de>"))]
+    Map<Item, ()>
+);
 
 impl<Item> Set<Item>
 where

@@ -11,6 +11,7 @@ use std::sync::Arc;
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct Wrap<Inner: Field> {
     digest: Bytes,
+    #[serde(bound(deserialize = "Arc<Inner>: Deserialize<'de>"))]
     inner: Arc<Inner>,
 }
 

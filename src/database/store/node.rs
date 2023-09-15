@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 pub(crate) enum Node<Key: Field, Value: Field> {
     Empty,
     Internal(Label, Label),
+    #[serde(bound(deserialize = "Wrap<Key>: Deserialize<'de>, Wrap<Value>: Deserialize<'de>"))]
     Leaf(Wrap<Key>, Wrap<Value>),
 }
 

@@ -8,7 +8,6 @@ use crate::{
 };
 
 use oh_snap::Snap;
-use serde::{Serialize, ser::SerializeStruct};
 
 use std::{
     collections::{hash_map::Entry, HashMap},
@@ -21,17 +20,6 @@ use talk::crypto::primitives::hash::Hash;
 pub(crate) struct Handle<Key: Field, Value: Field> {
     pub cell: Cell<Key, Value>,
     pub root: RwLock<Label>,
-}
-
-impl<Key: Field + Serialize, Value: Field + Serialize> Serialize for Handle<Key, Value> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer 
-    {
-        let mut handle = serializer.serialize_struct("Handle", 1)?;
-        handle.serialize_field("root", &self.root.read().unwrap().clone())?;
-        handle.end()
-    }
 }
 
 impl<Key, Value> Handle<Key, Value>

@@ -1,4 +1,5 @@
-use std::{sync::{RwLock, Arc}, path::Path, io::Write};
+use std::{sync::{RwLock, Arc}, path::Path, io::{Write, Read}};
+use serde::{Serialize, Deserialize};
 use serde_json;
 use crate::{
     common::store::Field,
@@ -9,6 +10,8 @@ use crate::{
 };
 
 use talk::sync::lenders::AtomicLender;
+
+use super::store::Label;
 
 /// A datastrucure for memory-efficient storage and transfer of maps with a
 /// large degree of similarity (% of key-pairs in common).
@@ -88,7 +91,7 @@ where
     pub(crate) tables: RwLock<Vec<Arc<Table<Key, Value>>>>,
 }
 
-impl<Key, Value> Database<Key, Value>
+impl<'de, Key, Value> Database<Key, Value>
 where
     Key: Field,
     Value: Field,
@@ -144,7 +147,12 @@ where
     pub fn receive(&self) -> TableReceiver<Key, Value> {
         TableReceiver::new(self.store.clone())
     }
-
+}
+impl<'de, Key, Value> Database<Key, Value>
+    where
+        Key: Field + Serialize + Deserialize<'de>,
+        Value: Field + Serialize + Deserialize<'de>,
+    {
     pub fn backup(&self, folder_path: &str){
         
         if !Path::new(folder_path).exists() {
@@ -160,8 +168,24 @@ where
         
         let mut file = std::fs::File::create(format!("{}/tables.json", folder_path)).unwrap();
         let tables = self.tables.write().unwrap();
-        let tables_str = serde_json::to_string(&tables.clone()).unwrap();
+        let labels: Vec<Label> = tables.to_vec().iter().map(|e| {e.root()}).collect();
+        let tables_str = serde_json::to_string(&labels).unwrap();
         file.write_all(tables_str.as_bytes()).unwrap();
+    }
+
+    pub fn restore(&self, folder_path: &str){
+        let mut file = std::fs::File::open(format!("{}/store.json", folder_path)).unwrap();
+        let mut store_str = String::new();
+        file.read_to_string(&mut store_str).unwrap();
+        let store: Store<Key, Value> = serde_json::from_str(&store_str).unwrap();
+        self.store.restore(store);
+
+        let mut file = std::fs::File::open(format!("{}/tables.json", folder_path)).unwrap();
+        let mut label_str = String::new();
+        file.read_to_string(&mut label_str).unwrap();
+        let labels: Vec<Label> = serde_json::from_str(&label_str).unwrap();
+        let mut tables = labels.iter().map(|e| {Arc::new(Table::new(self.store.clone(), e.clone()))}).collect();
+        *self.tables.write().unwrap() = tables;
     }
     
 }
@@ -185,10 +209,10 @@ mod tests {
 
     use crate::database::{store::Label, TableTransaction};
 
-    impl<Key, Value> Database<Key, Value>
+    impl<'de, Key, Value> Database<Key, Value>
     where
-        Key: Field,
-        Value: Field,
+        Key: Field + Serialize + Deserialize<'de>,
+        Value: Field + Serialize + Deserialize<'de>,
     {
         pub(crate) fn table_with_records<I>(&self, records: I) -> Arc<Table<Key, Value>>
         where
@@ -209,6 +233,8 @@ mod tests {
         where
             I: IntoIterator<Item = &'a Table<Key, Value>>,
             J: IntoIterator<Item = &'a TableReceiver<Key, Value>>,
+            Key: Field + Deserialize<'de>,
+            Value: Field + Deserialize<'de>,
         {
             let tables: Vec<&'a Table<Key, Value>> = tables.into_iter().collect();
 

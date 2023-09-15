@@ -11,7 +11,7 @@ use crate::{
 use doomstack::{here, ResultExt, Top};
 
 use oh_snap::Snap;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 
 use std::{borrow::Borrow, collections::HashMap, hash::Hash as StdHash};
 
@@ -36,7 +36,6 @@ use crate::database::{Database, TableReceiver};
 /// [`TableSender`]: crate::database::TableSender
 /// [`TableReceiver`]: crate::database::TableReceiver
 
-#[derive(Serialize)]
 pub struct Table<Key: Field, Value: Field>(Handle<Key, Value>);
 
 impl<Key, Value> Table<Key, Value>

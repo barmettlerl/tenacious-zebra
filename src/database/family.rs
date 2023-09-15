@@ -1,3 +1,4 @@
+
 use crate::{
     common::store::Field,
     database::{Collection, CollectionReceiver, Database},
@@ -6,7 +7,7 @@ use crate::{
 #[derive(Clone)]
 pub struct Family<Item: Field>(pub(crate) Database<Item, ()>);
 
-impl<Item> Family<Item>
+impl<'de, Item> Family<Item>
 where
     Item: Field,
 {

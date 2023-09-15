@@ -3,7 +3,7 @@ use crate::{
     database::store::{Entry, Label, MapId, Node, Split},
 };
 
-use serde::{Serialize, Serializer, ser::SerializeStruct};
+use serde::{Serialize, Serializer, ser::SerializeStruct, Deserialize, Deserializer};
 
 use oh_snap::Snap;
 
@@ -42,6 +42,10 @@ where
             ),
             scope: Prefix::root(),
         }
+    }
+
+    pub fn from_snap_and_scope(maps: Snap<EntryMap<Key, Value>>, scope: Prefix) -> Self {
+        Store { maps, scope }
     }
 
     pub fn merge(left: Self, right: Self) -> Self {
@@ -183,6 +187,23 @@ where
         store.end()
     }
 }
+
+impl<'de, Key, Value> Deserialize<'de> for Store<Key, Value>
+where
+    Key: Field + Deserialize<'de>,
+    Value: Field + Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let vec = Vec::<EntryMap::<Key, Value>>::deserialize(deserializer)?;
+        let snap = Snap::<EntryMap<Key, Value>>::new(vec);
+        let scope = Prefix::deserialize(deserializer)?;
+        Ok(Store::<Key, Value>::from_snap_and_scope(snap, scope))
+    }
+}
+
 
 #[cfg(test)]
 mod tests {

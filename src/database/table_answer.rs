@@ -17,4 +17,7 @@ use crate::database::{Question, TableReceiver, TableSender};
 /// [`Question`]: crate::database::Question
 
 #[derive(Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct TableAnswer<Key: Field, Value: Field>(pub(crate) Vec<Node<Key, Value>>);
+pub struct TableAnswer<Key: Field, Value: Field>(
+    #[serde(bound(deserialize = "Node<Key, Value>: Deserialize<'de>"))]
+    pub(crate) Vec<Node<Key, Value>>
+);
