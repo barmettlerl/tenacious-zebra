@@ -1,24 +1,26 @@
 use crate::{
-    common::{data::Bytes, store::Field, tree::Path},
+    common::{data::Bytes, store::Field, tree::{Path, Prefix, Direction}},
     database::{
         errors::QueryError,
         store::{Cell, Handle, Label},
         TableResponse, TableSender, TableTransaction,
     },
-    map::Map,
+    map::{Map},
 };
 use doomstack::{here, ResultExt, Top};
 
 use oh_snap::Snap;
-use std::{borrow::Borrow, collections::hash_map::{
+use std::{borrow::Borrow, collections::{hash_map::{
         Entry::{Occupied, Vacant},
-    }, hash::Hash as StdHash};
+    }, HashMap}, hash::Hash as StdHash};
 
 use talk::crypto::primitives::{hash, hash::Hash};
 
 // Documentation links
 #[allow(unused_imports)]
 use crate::database::{Database, TableReceiver};
+
+use super::store::{Store, Node, Wrap};
 
 /// A map implemented using Merkle Patricia Trees.
 ///
@@ -163,6 +165,94 @@ where
     pub fn send(&self) -> TableSender<Key, Value> {
         TableSender::from_handle(self.0.clone())
     }
+
+    fn check_internal(store: &mut Store<Key,Value>, label: Label) {
+        let (left, right) = Self::fetch_internal(store, label);
+
+        match (left, right) {
+            (Label::Empty, Label::Empty)
+            | (Label::Empty, Label::Leaf(..))
+            | (Label::Leaf(..), Label::Empty) => {
+                panic!("`check_internal`: children violate compactness")
+            }
+            _ => {}
+        }
+
+        for child in [left, right] {
+            if child != Label::Empty {
+                if let Vacant(..) = store.entry(child) {
+                    panic!("`check_internal`: child not found");
+                }
+            }
+        }
+    }
+
+    fn check_leaf(store: &mut Store<Key,Value>, label: Label, location: Prefix) {
+        let (key, _) = Self::fetch_leaf(store, label);
+        if !location.contains(&Path::from(key.digest())) {
+            panic!("`check_leaf`: leaf outside of its key path")
+        }
+    }
+
+    fn fetch_node(store: &mut Store<Key,Value>, label: Label) -> Node<Key, Value> {
+        match store.entry(label) {
+            Occupied(entry) => entry.get().node.clone(),
+            Vacant(..) => panic!("`fetch_node`: node not found"),
+        }
+    }
+
+    fn fetch_internal(store: &mut Store<Key,Value>, label: Label) -> (Label, Label) {
+        match Self::fetch_node(store, label) {
+            Node::Internal(left, right) => (left, right),
+            _ => panic!("`fetch_internal`: node not `Internal`"),
+        }
+    }
+
+    fn fetch_leaf(store: &mut Store<Key,Value>, label: Label) -> (Wrap<Key>, Wrap<Value>) {
+        match Self::fetch_node(store, label) {
+            Node::Leaf(key, value) => (key, value),
+            _ => panic!("`fetch_leaf`: node not `Leaf`"),
+        }
+    }
+
+    fn fetch_label_at(store: &mut Store<Key,Value>, root: Label, location: Prefix) -> Label {
+        let mut next = root;
+
+        for direction in location {
+            next = match (Self::fetch_node(store, next), direction) {
+                (Node::Internal(next, _), Direction::Left)
+                | (Node::Internal(_, next), Direction::Right) => next,
+                _ => panic!("`label_at`: reached a dead end"),
+            };
+        }
+
+        next
+    }
+
+    fn check_tree_recursion(store: &mut Store<Key, Value>, label: Label, location: Prefix)
+    {
+        match label {
+            Label::Internal(..) => {
+                Self::check_internal(store, label);
+
+                let (left, right) = Self::fetch_internal(store, label);
+                Self::check_tree_recursion(store, left, location.left());
+                Self::check_tree_recursion(store, right, location.right());
+            }
+            Label::Leaf(..) => {
+                Self::check_leaf(store, label, location);
+            }
+            Label::Empty => {}
+        }
+    }
+
+    pub(crate) fn check_tree(&self) {
+        let mut store = self.0.cell.take();
+
+        Self::check_tree_recursion(&mut store, self.get_root(), Prefix::root());
+
+        self.0.cell.restore(store);
+    }
 }
 
 impl<Key, Value> Clone for Table<Key, Value>
@@ -177,13 +267,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{database::store::{Store, Node, Wrap}, common::tree::{Prefix, Direction}};
 
     use super::*;
 
     use rand::seq::IteratorRandom;
 
-    use std::{fmt::Debug, hash::Hash};
+    use std::{fmt::Debug, hash::Hash, collections::HashMap};
 
     impl<Key, Value> Table<Key, Value>
     where
@@ -202,96 +291,6 @@ mod tests {
         {
             let mut store = self.0.cell.take();
             store.assert_records(*self.0.root.read().unwrap(), reference);
-            self.0.cell.restore(store);
-        }
-
-
-
-        pub(crate) fn check_internal(store: &Store<Key,Value>, label: Label) {
-            let (left, right) = Self::fetch_internal(store, label);
-
-            match (left, right) {
-                (Label::Empty, Label::Empty)
-                | (Label::Empty, Label::Leaf(..))
-                | (Label::Leaf(..), Label::Empty) => {
-                    panic!("`check_internal`: children violate compactness")
-                }
-                _ => {}
-            }
-
-            for child in [left, right] {
-                if child != Label::Empty {
-                    if let Vacant(..) = store.entry(child) {
-                        panic!("`check_internal`: child not found");
-                    }
-                }
-            }
-        }
-
-        pub fn check_leaf(store: &Store<Key,Value>, label: Label, location: Prefix) {
-            let (key, _) = Self::fetch_leaf(store, label);
-            if !location.contains(&Path::from(key.digest())) {
-                panic!("`check_leaf`: leaf outside of its key path")
-            }
-        }
-
-        pub fn fetch_node(store: &Store<Key,Value>, label: Label) -> Node<Key, Value> {
-            match store.entry(label) {
-                Occupied(entry) => entry.get().node.clone(),
-                Vacant(..) => panic!("`fetch_node`: node not found"),
-            }
-        }
-
-        pub(crate) fn fetch_internal(store: &Store<Key,Value>, label: Label) -> (Label, Label) {
-            match store.fetch_node(label) {
-                Node::Internal(left, right) => (left, right),
-                _ => panic!("`fetch_internal`: node not `Internal`"),
-            }
-        }
-
-        pub fn fetch_leaf(store: &Store<Key,Value>, label: Label) -> (Wrap<Key>, Wrap<Value>) {
-            match store.fetch_node(label) {
-                Node::Leaf(key, value) => (key, value),
-                _ => panic!("`fetch_leaf`: node not `Leaf`"),
-            }
-        }
-
-        pub fn fetch_label_at(store: &Store<Key,Value>, root: Label, location: Prefix) -> Label {
-            let mut next = root;
-
-            for direction in location {
-                next = match (store.fetch_node(next), direction) {
-                    (Node::Internal(next, _), Direction::Left)
-                    | (Node::Internal(_, next), Direction::Right) => next,
-                    _ => panic!("`label_at`: reached a dead end"),
-                };
-            }
-
-            next
-        }
-
-        fn check_tree_recursion(store: &Store<Key, Value>, label: Label, location: Prefix)
-        {
-            match label {
-                Label::Internal(..) => {
-                    Self::check_internal(store, label);
-
-                    let (left, right) = Self::fetch_internal(store, label);
-                    Self::check_tree_recursion(store, left, location.left());
-                    Self::check_tree_recursion(store, right, location.right());
-                }
-                Label::Leaf(..) => {
-                    store.check_leaf(label, location);
-                }
-                Label::Empty => {}
-            }
-        }
-
-        pub(crate) fn check_tree(&self) {
-            let store = self.0.cell.take();
-
-            Self::check_tree_recursion(&store, self.root(), Prefix::root());
-
             self.0.cell.restore(store);
         }
 

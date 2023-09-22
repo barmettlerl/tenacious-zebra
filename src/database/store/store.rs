@@ -74,16 +74,18 @@ where
         }
     }
 
-    #[cfg(test)]
-    pub fn size(&self) -> usize {
-        debug_assert!(self.maps.is_complete());
-        self.maps.iter().map(|map| map.len()).sum()
-    }
 
     pub fn entry(&mut self, label: Label) -> EntryMapEntry<Key, Value> {
         let map = label.map().id() - self.maps.range().start;
         let hash = label.hash();
         self.maps[map].entry(hash)
+    }
+
+
+    #[cfg(test)]
+    pub fn size(&self) -> usize {
+        debug_assert!(self.maps.is_complete());
+        self.maps.iter().map(|map| map.len()).sum()
     }
 
     pub fn label(&self, node: &Node<Key, Value>) -> Label {

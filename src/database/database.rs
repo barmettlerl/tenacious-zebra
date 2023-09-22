@@ -2,7 +2,7 @@ use std::{sync::{RwLock, Arc}, path::Path, io::{Write, Read}};
 use serde::{Serialize, de::DeserializeOwned};
 use bincode;
 use crate::{
-    common::store::Field,
+    common::{store::Field, data},
     database::{
         store::{Cell, Store},
         Table, TableReceiver,
@@ -214,7 +214,8 @@ impl<Key, Value> Database<Key, Value>
             database.add_table(Arc::new(Table::new(database.store.clone(), e.1, e.0.clone())))
         });
 
-        // TODO check if data is correct
+        database.tables.read().unwrap().iter().for_each(|e| e.check_tree());
+
         database
     }
     
