@@ -3,7 +3,7 @@ use crate::{
     database::store::{Entry, Label, MapId, Node, Split},
 };
 
-use serde::{Serialize, Serializer, ser::SerializeStruct, Deserialize, Deserializer};
+use serde::{Serialize, Serializer, ser::SerializeStruct, Deserialize, Deserializer, de::{Visitor, SeqAccess, DeserializeOwned}};
 
 use oh_snap::Snap;
 
@@ -15,7 +15,7 @@ use std::{
         },
         HashMap,
     },
-    iter::{self, FromIterator},
+    iter::{self, FromIterator}, fmt::Formatter, error::Error,
 };
 
 pub(crate) type EntryMap<Key, Value> = HashMap<Bytes, Entry<Key, Value>>;
@@ -23,6 +23,7 @@ pub(crate) type EntryMapEntry<'a, Key, Value> = HashMapEntry<'a, Bytes, Entry<Ke
 
 pub(crate) const DEPTH: u8 = 8;
 
+#[derive(Serialize, Deserialize)]
 pub(crate) struct Store<Key: Field, Value: Field> {
     maps: Snap<EntryMap<Key, Value>>,
     scope: Prefix,
@@ -42,10 +43,6 @@ where
             ),
             scope: Prefix::root(),
         }
-    }
-
-    pub fn from_snap_and_scope(maps: Snap<EntryMap<Key, Value>>, scope: Prefix) -> Self {
-        Store { maps, scope }
     }
 
     pub fn merge(left: Self, right: Self) -> Self {
@@ -168,42 +165,6 @@ where
     }
 
 }
-
-impl<Key, Value> Serialize for Store<Key, Value>
-where
-    Key: Field,
-    Value: Field,
-{
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut store = serializer.serialize_struct("Store", 2)?;
-        let converted_maps = self.maps.iter()
-            .map(|submap| Vec::from_iter(submap.iter().map(|entry| (entry.0, entry.1))));
-        
-        store.serialize_field("maps", &Vec::from_iter(converted_maps))?;
-        store.serialize_field("scope", &self.scope)?;
-        store.end()
-    }
-}
-
-impl<'de, Key, Value> Deserialize<'de> for Store<Key, Value>
-where
-    Key: Field + Deserialize<'de>,
-    Value: Field + Deserialize<'de>,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let vec = Vec::<EntryMap::<Key, Value>>::deserialize(deserializer)?;
-        let snap = Snap::<EntryMap<Key, Value>>::new(vec);
-        let scope = Prefix::deserialize(deserializer)?;
-        Ok(Store::<Key, Value>::from_snap_and_scope(snap, scope))
-    }
-}
-
 
 #[cfg(test)]
 mod tests {

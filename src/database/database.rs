@@ -1,8 +1,8 @@
 use std::{sync::{RwLock, Arc}, path::Path, io::{Write, Read}};
-use serde::{Serialize, Deserialize};
-use serde_json;
+use serde::{Serialize, Deserialize, de::DeserializeOwned};
+use bincode;
 use crate::{
-    common::store::Field,
+    common::{store::Field, data},
     database::{
         store::{Cell, Store},
         Table, TableReceiver,
@@ -91,7 +91,7 @@ where
     pub(crate) tables: RwLock<Vec<Arc<Table<Key, Value>>>>,
 }
 
-impl<'de, Key, Value> Database<Key, Value>
+impl<Key, Value> Database<Key, Value>
 where
     Key: Field,
     Value: Field,
@@ -111,6 +111,17 @@ where
         }
     }
 
+    pub(crate) fn from_store(store: Store<Key, Value>) -> Self {
+        Database {
+            store: Cell::new(AtomicLender::new(store)),
+            tables: RwLock::new(Vec::new()),
+        }
+    }
+
+    pub(crate) fn add_table(&self, table: Arc<Table<Key, Value>>) {
+        self.tables.write().unwrap().push(table);
+    }
+
     /// Creates and assigns an empty [`Table`] to the `Database`.
     ///
     /// # Examples
@@ -121,8 +132,8 @@ where
     ///
     /// let table = database.empty_table();
     /// ```
-    pub fn empty_table(&self) -> Arc<Table<Key, Value>> {
-        let table = Arc::new(Table::empty(self.store.clone()));
+    pub fn empty_table(&self, name: &str) -> Arc<Table<Key, Value>> {
+        let table = Arc::new(Table::empty(self.store.clone(), name));
         self.tables.write().unwrap().push(table.clone());
         table
     }
@@ -148,10 +159,10 @@ where
         TableReceiver::new(self.store.clone())
     }
 }
-impl<'de, Key, Value> Database<Key, Value>
+impl<Key, Value> Database<Key, Value>
     where
-        Key: Field + Serialize + Deserialize<'de>,
-        Value: Field + Serialize + Deserialize<'de>,
+        Key: Field + Serialize + DeserializeOwned,
+        Value: Field + Serialize + DeserializeOwned,
     {
     pub fn backup(&self, folder_path: &str){
         
@@ -159,33 +170,38 @@ impl<'de, Key, Value> Database<Key, Value>
             std::fs::create_dir(folder_path).unwrap();
         }
 
-        let mut file = std::fs::File::create(format!("{}/store.json", folder_path)).unwrap();
+        let mut file = std::fs::File::create(format!("{}/store", folder_path)).unwrap();
         let store = self.store.take();
-        let store_str = serde_json::to_string(&store).unwrap();
+        let store_str = bincode::serialize(&store).unwrap();
         self.store.restore(store);
 
-        file.write_all(store_str.as_bytes()).unwrap();
+        file.write_all(&store_str).unwrap();
         
-        let mut file = std::fs::File::create(format!("{}/tables.json", folder_path)).unwrap();
+        let mut file = std::fs::File::create(format!("{}/tables", folder_path)).unwrap();
         let tables = self.tables.write().unwrap();
-        let labels: Vec<Label> = tables.to_vec().iter().map(|e| {e.root()}).collect();
-        let tables_str = serde_json::to_string(&labels).unwrap();
-        file.write_all(tables_str.as_bytes()).unwrap();
+        let labels: Vec<Label> = tables.to_vec().iter().map(|e| {e.get_root()}).collect();
+        let tables_str = bincode::serialize(&labels).unwrap();
+        file.write_all(&tables_str).unwrap();
     }
 
-    pub fn restore(&self, folder_path: &str){
-        let mut file = std::fs::File::open(format!("{}/store.json", folder_path)).unwrap();
-        let mut store_str = String::new();
-        file.read_to_string(&mut store_str).unwrap();
-        let store: Store<Key, Value> = serde_json::from_str(&store_str).unwrap();
-        self.store.restore(store);
+    pub fn restore(folder_path: &str) -> Self{
+        let mut file = std::fs::File::open(format!("{}/store", folder_path)).unwrap();
+        
+        let mut store_str = Vec::<u8>::new();
+        file.read_to_end(&mut store_str).unwrap();
+        let store: Store<Key, Value> = bincode::deserialize(&store_str).unwrap();
+        let database = Database::from_store(store);
 
-        let mut file = std::fs::File::open(format!("{}/tables.json", folder_path)).unwrap();
-        let mut label_str = String::new();
-        file.read_to_string(&mut label_str).unwrap();
-        let labels: Vec<Label> = serde_json::from_str(&label_str).unwrap();
-        let mut tables = labels.iter().map(|e| {Arc::new(Table::new(self.store.clone(), e.clone()))}).collect();
-        *self.tables.write().unwrap() = tables;
+        let mut file = std::fs::File::open(format!("{}/tables", folder_path)).unwrap();
+        let mut label_str = Vec::<u8>::new();
+        file.read_to_end(&mut label_str).unwrap();
+        let labels: Vec<Label> = bincode::deserialize(&label_str).unwrap();
+        labels.iter().for_each(|e| {
+            database.add_table(Arc::new(Table::new(database.store.clone(), e.clone())))
+        });
+
+        // TODO check if data is correct
+        database
     }
     
 }

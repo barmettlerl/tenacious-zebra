@@ -36,28 +36,32 @@ use crate::database::{Database, TableReceiver};
 /// [`TableSender`]: crate::database::TableSender
 /// [`TableReceiver`]: crate::database::TableReceiver
 
-pub struct Table<Key: Field, Value: Field>(Handle<Key, Value>);
+pub struct Table<Key: Field, Value: Field>(Handle<Key, Value>, String);
 
 impl<Key, Value> Table<Key, Value>
 where
     Key: Field,
     Value: Field,
 {
-    pub(crate) fn empty(cell: Cell<Key, Value>) -> Self {
-        Table(Handle::empty(cell))
+    pub(crate) fn empty(cell: Cell<Key, Value>, name: String) -> Self {
+        Table(Handle::empty(cell), name)
     }
 
-    pub(crate) fn new(cell: Cell<Key, Value>, root: Label) -> Self {
-        Table(Handle::new(cell, root))
+    pub(crate) fn new(cell: Cell<Key, Value>, root: Label, name:String) -> Self {
+        Table(Handle::new(cell, root), name)
     }
 
-    pub(crate) fn from_handle(handle: Handle<Key, Value>) -> Self {
-        Table(handle)
+    pub(crate) fn from_handle(handle: Handle<Key, Value>, name: String) -> Self {
+        Table(handle, name)
     }
 
     /// Returns a cryptographic commitment to the contents of the `Table`.
     pub fn commit(&self) -> Hash {
         self.0.commit()
+    }
+
+    pub(crate) fn get_root(&self) -> Label {
+        self.0.root.read().unwrap().clone()
     }
 
     /// Executes a [`TableTransaction`] returning a [`TableResponse`]
@@ -164,7 +168,7 @@ where
     Value: Field,
 {
     fn clone(&self) -> Self {
-        Table(self.0.clone())
+        Table(self.0.clone(), self.1.clone())
     }
 }
 
@@ -206,7 +210,7 @@ mod tests {
     #[test]
     fn export_empty() {
         let database: Database<u32, u32> = Database::new();
-        let table = database.empty_table();
+        let table = database.empty_table("test");
 
         let map = table.export::<[u32; 0], u32>([]).unwrap(); // Explicit type arguments are to aid type inference on an empty array
 
@@ -220,7 +224,7 @@ mod tests {
     #[test]
     fn export_none() {
         let database: Database<u32, u32> = Database::new();
-        let table = database.empty_table();
+        let table = database.empty_table("test");
 
         let mut transaction = TableTransaction::new();
         for (key, value) in (0..1024).map(|i| (i, i)) {
@@ -241,7 +245,7 @@ mod tests {
     #[test]
     fn export_single() {
         let database: Database<u32, u32> = Database::new();
-        let table = database.empty_table();
+        let table = database.empty_table("test");
 
         let mut transaction = TableTransaction::new();
         for (key, value) in (0..1024).map(|i| (i, i)) {
@@ -262,7 +266,7 @@ mod tests {
     #[test]
     fn export_half() {
         let database: Database<u32, u32> = Database::new();
-        let table = database.empty_table();
+        let table = database.empty_table("test");
 
         let mut transaction = TableTransaction::new();
         for (key, value) in (0..1024).map(|i| (i, i)) {
@@ -284,7 +288,7 @@ mod tests {
     #[test]
     fn export_all() {
         let database: Database<u32, u32> = Database::new();
-        let table = database.empty_table();
+        let table = database.empty_table("test");
 
         let mut transaction = TableTransaction::new();
         for (key, value) in (0..1024).map(|i| (i, i)) {
@@ -305,8 +309,8 @@ mod tests {
     fn diff_empty_empty() {
         let database: Database<u32, u32> = Database::new();
 
-        let mut lho = database.empty_table();
-        let mut rho = database.empty_table();
+        let mut lho = database.empty_table("test");
+        let mut rho = database.empty_table("test2");
 
         assert_eq!(Table::diff(&mut lho, &mut rho), HashMap::new());
     }
@@ -315,8 +319,8 @@ mod tests {
     fn diff_identity_empty() {
         let database: Database<u32, u32> = Database::new();
 
-        let mut lho = database.empty_table();
-        let mut rho = database.empty_table();
+        let mut lho = database.empty_table("test");
+        let mut rho = database.empty_table("test2");
 
         let mut transaction = TableTransaction::new();
         for (key, value) in (0..1024).map(|i| (i, i)) {
@@ -343,8 +347,8 @@ mod tests {
     fn diff_identity_match() {
         let database: Database<u32, u32> = Database::new();
 
-        let mut lho = database.empty_table();
-        let mut rho = database.empty_table();
+        let mut lho = database.empty_table("test");
+        let mut rho = database.empty_table("test2");
 
         let mut transaction = TableTransaction::new();
         for (key, value) in (0..1024).map(|i| (i, i)) {
@@ -372,8 +376,8 @@ mod tests {
     fn diff_identity_successor() {
         let database: Database<u32, u32> = Database::new();
 
-        let mut lho = database.empty_table();
-        let mut rho = database.empty_table();
+        let mut lho = database.empty_table("test");
+        let mut rho = database.empty_table("test2");
 
         let mut transaction = TableTransaction::new();
         for (key, value) in (0..1024).map(|i| (i, i)) {
@@ -407,8 +411,8 @@ mod tests {
     fn diff_first_identity_match_rest_successor() {
         let database: Database<u32, u32> = Database::new();
 
-        let mut lho = database.empty_table();
-        let mut rho = database.empty_table();
+        let mut lho = database.empty_table("test");
+        let mut rho = database.empty_table("test2");
 
         let mut transaction = TableTransaction::new();
         for (key, value) in (0..1024).map(|i| (i, i)) {
@@ -452,8 +456,8 @@ mod tests {
     fn diff_half_identity_match_half_successor() {
         let database: Database<u32, u32> = Database::new();
 
-        let mut lho = database.empty_table();
-        let mut rho = database.empty_table();
+        let mut lho = database.empty_table("test");
+        let mut rho = database.empty_table("test2");
 
         let mut transaction = TableTransaction::new();
         for (key, value) in (0..1024).map(|i| (i, i)) {
@@ -500,8 +504,8 @@ mod tests {
     fn diff_identity_overlap() {
         let database: Database<u32, u32> = Database::new();
 
-        let mut lho = database.empty_table();
-        let mut rho = database.empty_table();
+        let mut lho = database.empty_table("test");
+        let mut rho = database.empty_table("test2");
 
         let mut transaction = TableTransaction::new();
         for (key, value) in (0..1024).map(|i| (i, i)) {
@@ -559,8 +563,8 @@ mod tests {
         let mut rng = rand::thread_rng();
 
         for _ in 0..512 {
-            let mut lho = database.empty_table();
-            let mut rho = database.empty_table();
+            let mut lho = database.empty_table("test");
+            let mut rho = database.empty_table("test2");
             let mut diff_reference = HashMap::new();
 
             let mut lho_transaction = TableTransaction::new();
