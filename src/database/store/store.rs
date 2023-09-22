@@ -3,7 +3,7 @@ use crate::{
     database::store::{Entry, Label, MapId, Node, Split},
 };
 
-use serde::{Serialize, Serializer, ser::SerializeStruct, Deserialize, Deserializer, de::{Visitor, SeqAccess, DeserializeOwned}};
+use serde::{Serialize, Deserialize};
 
 use oh_snap::Snap;
 
@@ -15,7 +15,7 @@ use std::{
         },
         HashMap,
     },
-    iter::{self, FromIterator}, fmt::Formatter, error::Error,
+    iter,
 };
 
 pub(crate) type EntryMap<Key, Value> = HashMap<Bytes, Entry<Key, Value>>;

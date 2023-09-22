@@ -1,8 +1,8 @@
 use std::{sync::{RwLock, Arc}, path::Path, io::{Write, Read}};
-use serde::{Serialize, Deserialize, de::DeserializeOwned};
+use serde::{Serialize, de::DeserializeOwned};
 use bincode;
 use crate::{
-    common::{store::Field, data},
+    common::store::Field,
     database::{
         store::{Cell, Store},
         Table, TableReceiver,
@@ -122,6 +122,10 @@ where
         self.tables.write().unwrap().push(table);
     }
 
+    pub fn get_table(&self, name: &str) -> Option<Arc<Table<Key, Value>>> {
+        self.tables.read().unwrap().iter().find(|e| e.get_name() == name).map(|e| e.clone())
+    }
+
     /// Creates and assigns an empty [`Table`] to the `Database`.
     ///
     /// # Examples
@@ -221,6 +225,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use serde::Deserialize;
+
     use super::*;
 
     use crate::database::{store::Label, TableTransaction};
