@@ -83,7 +83,7 @@ where
                         self.flush(&mut store, root);
                         self.cell.restore(store);
 
-                        Ok(TableStatus::Complete(Table::new(self.cell.clone(), root, self.name)))
+                        Ok(TableStatus::Complete(Table::new(self.cell.clone(), root, self.name.clone())))
                     }
                     None => {
                         // No node received: the new table's `root` should be `Empty`
@@ -91,7 +91,7 @@ where
                         Ok(TableStatus::Complete(Table::new(
                             self.cell.clone(),
                             Label::Empty,
-                            self.name
+                            self.name.clone(),
                         )))
                     }
                 }

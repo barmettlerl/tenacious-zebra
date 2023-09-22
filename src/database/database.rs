@@ -55,7 +55,7 @@ use super::store::Label;
 ///     let mut modify = TableTransaction::new();
 ///     modify.set("Alice", 42).unwrap();
 ///
-///     let mut table = database.empty_table();
+///     let mut table = database.empty_table("test");
 ///     let _ = table.execute(modify);
 ///
 ///     let mut read = TableTransaction::new();
@@ -130,7 +130,7 @@ where
     /// use zebra::database::Database;
     /// let mut database: Database<&str, i32> = Database::new();
     ///
-    /// let table = database.empty_table();
+    /// let table = database.empty_table("test");
     /// ```
     pub fn empty_table(&self, name: &str) -> Arc<Table<Key, Value>> {
         let table = Arc::new(Table::empty(self.store.clone(), name.to_string()));

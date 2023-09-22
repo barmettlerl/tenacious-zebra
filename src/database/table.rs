@@ -90,7 +90,7 @@ where
     ///     // Read records with (key = 2)
     ///     let read_key = transaction.get(&2).unwrap();
     ///
-    ///     let mut table = database.empty_table();
+    ///     let mut table = database.empty_table("test");
     ///     
     ///     // Executes the transaction, returning a response.
     ///     let response = table.execute(transaction);
@@ -151,7 +151,7 @@ where
     /// use zebra::database::Database;
     ///
     /// let mut database: Database<u32, u32> = Database::new();
-    /// let original = database.empty_table();
+    /// let original = database.empty_table("test");
     ///
     /// // Sending consumes the copy so we typically clone first, which is cheap.
     /// let copy = original.clone();
