@@ -21,6 +21,7 @@ const DEFAULT_WINDOW: usize = 128;
 pub struct TableReceiver<Key: Field, Value: Field> {
     cell: Cell<Key, Value>,
     root: Option<Label>,
+    name: String,
     held: HashSet<Label>,
     frontier: HashMap<Bytes, Context>,
     acquired: HashMap<Bytes, Node<Key, Value>>,
@@ -45,6 +46,7 @@ where
         TableReceiver {
             cell,
             root: None,
+            name: String::new(),
             held: HashSet::new(),
             frontier: HashMap::new(),
             acquired: HashMap::new(),
@@ -81,7 +83,7 @@ where
                         self.flush(&mut store, root);
                         self.cell.restore(store);
 
-                        Ok(TableStatus::Complete(Table::new(self.cell.clone(), root)))
+                        Ok(TableStatus::Complete(Table::new(self.cell.clone(), root, self.name)))
                     }
                     None => {
                         // No node received: the new table's `root` should be `Empty`
@@ -89,6 +91,7 @@ where
                         Ok(TableStatus::Complete(Table::new(
                             self.cell.clone(),
                             Label::Empty,
+                            self.name
                         )))
                     }
                 }
@@ -253,7 +256,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use serde::{Deserializer, Serialize, Deserialize};
+    use serde::{Serialize, Deserialize};
 
     use super::*;
 
@@ -385,7 +388,7 @@ mod tests {
         let alice: Database<u32, u32> = Database::new();
         let bob: Database<u32, u32> = Database::new();
 
-        let original = alice.empty_table();
+        let original = alice.empty_table("test");
         let mut sender = original.send();
 
         let receiver = bob.receive();

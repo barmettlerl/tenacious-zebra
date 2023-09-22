@@ -24,7 +24,7 @@ where
         self.0.answer(question)
     }
 
-    pub fn end(self) -> Collection<Item> {
-        Collection(Arc::new(self.0.end()))
+    pub fn end(self, name: String) -> Collection<Item> {
+        Collection(Arc::new(self.0.end(name)))
     }
 }

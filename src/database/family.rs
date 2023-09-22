@@ -15,8 +15,8 @@ where
         Family(Database::new())
     }
 
-    pub fn empty_collection(&self) -> Collection<Item> {
-        Collection(self.0.empty_table())
+    pub fn empty_collection(&self, name: &str) -> Collection<Item> {
+        Collection(self.0.empty_table(name))
     }
 
     pub fn receive(&self) -> CollectionReceiver<Item> {

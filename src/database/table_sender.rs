@@ -46,8 +46,8 @@ where
         Ok(TableAnswer(collector))
     }
 
-    pub fn end(self) -> Table<Key, Value> {
-        Table::from_handle(self.0)
+    pub fn end(self, name: String) -> Table<Key, Value> {
+        Table::from_handle(self.0, name)
     }
 
     fn grab(
@@ -95,7 +95,7 @@ mod tests {
     #[test]
     fn answer_empty() {
         let database: Database<u32, u32> = Database::new();
-        let table = database.empty_table();
+        let table = database.empty_table("test");
 
         let send = table.send();
 
@@ -107,7 +107,7 @@ mod tests {
     #[test]
     fn answer_non_existant() {
         let database: Database<u32, u32> = Database::new();
-        let table = database.empty_table();
+        let table = database.empty_table("test");
 
         let send = table.send();
         let leaf = leaf!(1u32, 1u32);

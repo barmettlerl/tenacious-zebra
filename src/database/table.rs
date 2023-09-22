@@ -11,8 +11,6 @@ use crate::{
 use doomstack::{here, ResultExt, Top};
 
 use oh_snap::Snap;
-use serde::{Serialize, Deserialize};
-
 use std::{borrow::Borrow, collections::HashMap, hash::Hash as StdHash};
 
 use talk::crypto::primitives::{hash, hash::Hash};
@@ -62,6 +60,10 @@ where
 
     pub(crate) fn get_root(&self) -> Label {
         self.0.root.read().unwrap().clone()
+    }
+
+    pub(crate) fn get_name(&self) -> String {
+        self.1.clone()
     }
 
     /// Executes a [`TableTransaction`] returning a [`TableResponse`]

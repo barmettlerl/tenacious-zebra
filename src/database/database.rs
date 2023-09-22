@@ -133,7 +133,7 @@ where
     /// let table = database.empty_table();
     /// ```
     pub fn empty_table(&self, name: &str) -> Arc<Table<Key, Value>> {
-        let table = Arc::new(Table::empty(self.store.clone(), name));
+        let table = Arc::new(Table::empty(self.store.clone(), name.to_string()));
         self.tables.write().unwrap().push(table.clone());
         table
     }
@@ -179,7 +179,7 @@ impl<Key, Value> Database<Key, Value>
         
         let mut file = std::fs::File::create(format!("{}/tables", folder_path)).unwrap();
         let tables = self.tables.write().unwrap();
-        let labels: Vec<Label> = tables.to_vec().iter().map(|e| {e.get_root()}).collect();
+        let labels: Vec<(String, Label)> = tables.to_vec().iter().map(|e| {(e.get_name(), e.get_root())}).collect();
         let tables_str = bincode::serialize(&labels).unwrap();
         file.write_all(&tables_str).unwrap();
     }
@@ -193,11 +193,11 @@ impl<Key, Value> Database<Key, Value>
         let database = Database::from_store(store);
 
         let mut file = std::fs::File::open(format!("{}/tables", folder_path)).unwrap();
-        let mut label_str = Vec::<u8>::new();
-        file.read_to_end(&mut label_str).unwrap();
-        let labels: Vec<Label> = bincode::deserialize(&label_str).unwrap();
+        let mut tables_str = Vec::<u8>::new();
+        file.read_to_end(&mut tables_str).unwrap();
+        let labels: Vec<(String, Label)> = bincode::deserialize(&tables_str).unwrap();
         labels.iter().for_each(|e| {
-            database.add_table(Arc::new(Table::new(database.store.clone(), e.clone())))
+            database.add_table(Arc::new(Table::new(database.store.clone(), e.1.clone(), e.0.clone())))
         });
 
         // TODO check if data is correct
@@ -234,7 +234,7 @@ mod tests {
         where
             I: IntoIterator<Item = (Key, Value)>,
         {
-            let table = self.empty_table();
+            let table = self.empty_table("test");
             let mut transaction = TableTransaction::new();
 
             for (key, value) in records {
@@ -317,7 +317,7 @@ mod tests {
     fn test_if_len_is_correct_when_database_contains_one_element() {
         let database: Database<u32, u32> = Database::new();
 
-        database.empty_table();
+        database.empty_table("test");
 
         let tables = database.tables.read().unwrap();
 
