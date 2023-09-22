@@ -123,7 +123,7 @@ where
     }
 
     pub fn get_table(&self, name: &str) -> Option<Arc<Table<Key, Value>>> {
-        self.tables.read().unwrap().iter().find(|e| e.get_name() == name).map(|e| e.clone())
+        self.tables.read().unwrap().iter().find(|e| e.get_name() == name).cloned()
     }
 
     /// Creates and assigns an empty [`Table`] to the `Database`.
@@ -161,6 +161,16 @@ where
     /// ```
     pub fn receive(&self) -> TableReceiver<Key, Value> {
         TableReceiver::new(self.store.clone())
+    }
+}
+
+impl<Key, Value> Default for Database<Key, Value>
+where
+    Key: Field,
+    Value: Field,
+{
+    fn default() -> Self {
+        Self::new()
     }
 }
 impl<Key, Value> Database<Key, Value>
@@ -201,7 +211,7 @@ impl<Key, Value> Database<Key, Value>
         file.read_to_end(&mut tables_str).unwrap();
         let labels: Vec<(String, Label)> = bincode::deserialize(&tables_str).unwrap();
         labels.iter().for_each(|e| {
-            database.add_table(Arc::new(Table::new(database.store.clone(), e.1.clone(), e.0.clone())))
+            database.add_table(Arc::new(Table::new(database.store.clone(), e.1, e.0.clone())))
         });
 
         // TODO check if data is correct
@@ -268,7 +278,7 @@ mod tests {
 
             let table_held = tables.iter().map(|table| table.root());
 
-            let receiver_held = receivers.iter().map(|receiver| receiver.held()).flatten();
+            let receiver_held = receivers.iter().flat_map(|receiver| receiver.held());
 
             let held: Vec<Label> = table_held.chain(receiver_held).collect();
 
