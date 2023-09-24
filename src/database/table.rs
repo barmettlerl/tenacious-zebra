@@ -1,18 +1,16 @@
 use crate::{
-    common::{data::Bytes, store::Field, tree::{Path, Prefix, Direction}},
+    common::{data::Bytes, store::Field, tree::{Path, Prefix}},
     database::{
         errors::QueryError,
         store::{Cell, Handle, Label},
         TableResponse, TableSender, TableTransaction,
     },
-    map::{Map},
+    map::Map,
 };
 use doomstack::{here, ResultExt, Top};
 
 use oh_snap::Snap;
-use std::{borrow::Borrow, collections::{hash_map::{
-        Entry::{Occupied, Vacant},
-    }, HashMap}, hash::Hash as StdHash};
+use std::{borrow::Borrow, collections::{hash_map::Entry::{Occupied, Vacant}, HashMap}, hash::Hash as StdHash};
 
 use talk::crypto::primitives::{hash, hash::Hash};
 
@@ -62,7 +60,7 @@ where
     }
 
     pub(crate) fn get_root(&self) -> Label {
-        self.0.root.read().unwrap().clone()
+        *self.0.root.read().unwrap()
     }
 
     pub(crate) fn get_name(&self) -> String {
@@ -215,20 +213,6 @@ where
         }
     }
 
-    fn fetch_label_at(store: &mut Store<Key,Value>, root: Label, location: Prefix) -> Label {
-        let mut next = root;
-
-        for direction in location {
-            next = match (Self::fetch_node(store, next), direction) {
-                (Node::Internal(next, _), Direction::Left)
-                | (Node::Internal(_, next), Direction::Right) => next,
-                _ => panic!("`label_at`: reached a dead end"),
-            };
-        }
-
-        next
-    }
-
     fn check_tree_recursion(store: &mut Store<Key, Value>, label: Label, location: Prefix)
     {
         match label {
@@ -246,7 +230,7 @@ where
         }
     }
 
-    pub(crate) fn check_tree(&self) {
+    pub(crate) fn check(&self) {
         let mut store = self.0.cell.take();
 
         Self::check_tree_recursion(&mut store, self.get_root(), Prefix::root());

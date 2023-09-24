@@ -48,33 +48,33 @@ use super::store::Label;
 ///
 /// fn main() {
 ///     // Type inference lets us omit an explicit type signature (which
-///     // would be `Database<&str, integer>` in this example).
+///     // would be `Database<String, integer>` in this example).
 ///     let database = Database::new();
 ///
 ///     // We create a new transaction. See [`Transaction`] for more details.
 ///     let mut modify = TableTransaction::new();
-///     modify.set("Alice", 42).unwrap();
+///     modify.set(String::from("Alice"), 42).unwrap();
 ///
 ///     let mut table = database.empty_table("test");
 ///     let _ = table.execute(modify);
 ///
 ///     let mut read = TableTransaction::new();
-///     let query_key = read.get(&"Alice").unwrap();
+///     let query_key = read.get(&"Alice".to_string()).unwrap();
 ///     let response = table.execute(read);
 ///
 ///     assert_eq!(response.get(&query_key), Some(&42));
 ///
 ///     // Let's remove "Alice" and set "Bob".
 ///     let mut modify = TableTransaction::new();
-///     modify.remove(&"Alice").unwrap();
-///     modify.set(&"Bob", 23).unwrap();
+///     modify.remove(&"Alice".to_string()).unwrap();
+///     modify.set(&"Bob".to_string(), 23).unwrap();
 ///
 ///     // Ignore the response (modify only)
 ///     let _ = table.execute(modify);
 ///
 ///     let mut read = TableTransaction::new();
-///     let query_key_alice = read.get(&"Alice").unwrap();
-///     let query_key_bob = read.get(&"Bob").unwrap();
+///     let query_key_alice = read.get(&"Alice".to_string()).unwrap();
+///     let query_key_bob = read.get(&"Bob".to_string()).unwrap();
 ///     let response = table.execute(read);
 ///
 ///     assert_eq!(response.get(&query_key_alice), None);
@@ -102,7 +102,7 @@ where
     ///
     /// ```
     /// use zebra::database::Database;
-    /// let mut database: Database<&str, i32> = Database::new();
+    /// let mut database: Database<String, i32> = Database::new();
     /// ```
     pub fn new() -> Self {
         Database {
@@ -132,7 +132,7 @@ where
     ///
     /// ```
     /// use zebra::database::Database;
-    /// let mut database: Database<&str, i32> = Database::new();
+    /// let mut database: Database<String, i32> = Database::new();
     ///
     /// let table = database.empty_table("test");
     /// ```
@@ -152,7 +152,7 @@ where
     ///
     /// ```
     /// use zebra::database::Database;
-    /// let mut database: Database<&str, i32> = Database::new();
+    /// let mut database: Database<String, i32> = Database::new();
     ///
     /// let mut receiver = database.receive();
     ///
@@ -173,11 +173,39 @@ where
         Self::new()
     }
 }
+
 impl<Key, Value> Database<Key, Value>
     where
         Key: Field + Serialize + DeserializeOwned,
         Value: Field + Serialize + DeserializeOwned,
     {
+
+    /// Creates a backup of the database in the specified folder.
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    ///
+    /// use zebra::database::Database;
+    /// let database = Database::new();
+    /// 
+    /// let mut modify = TableTransaction::new();
+    /// modify.set("Alice".to_string(), 42).unwrap();
+    /// 
+    /// 
+    /// let table = database.empty_table("test");
+    /// let _ = table.execute(modify);
+    /// 
+    /// database.backup("./backup");
+    /// 
+    /// let new_database = Database::<String, i32>::restore("./backup");
+    /// 
+    /// let new_table = new_database.get_table("test").unwrap();
+    /// 
+    /// let mut read = TableTransaction::new();
+    /// let query_key = read.get(&"Alice".to_string()).unwrap();
+    /// let response = new_table.execute(read);
+    /// ```
     pub fn backup(&self, folder_path: &str){
         
         if !Path::new(folder_path).exists() {
@@ -198,6 +226,32 @@ impl<Key, Value> Database<Key, Value>
         file.write_all(&tables_str).unwrap();
     }
 
+    /// Restores a database from a backup.
+    /// 
+    /// # Examples
+    /// 
+    /// ```
+    ///
+    /// use zebra::database::Database;
+    /// let database = Database::new();
+    /// 
+    /// let mut modify = TableTransaction::new();
+    /// modify.set("Alice".to_string(), 42).unwrap();
+    /// 
+    /// 
+    /// let table = database.empty_table("test");
+    /// let _ = table.execute(modify);
+    /// 
+    /// database.backup("./backup");
+    /// 
+    /// let new_database = Database::<String, i32>::restore("./backup");
+    /// 
+    /// let new_table = new_database.get_table("test").unwrap();
+    /// 
+    /// let mut read = TableTransaction::new();
+    /// let query_key = read.get(&"Alice".to_string()).unwrap();
+    /// let response = new_table.execute(read);
+    /// ```
     pub fn restore(folder_path: &str) -> Self{
         let mut file = std::fs::File::open(format!("{}/store", folder_path)).unwrap();
         
@@ -214,7 +268,7 @@ impl<Key, Value> Database<Key, Value>
             database.add_table(Arc::new(Table::new(database.store.clone(), e.1, e.0.clone())))
         });
 
-        database.tables.read().unwrap().iter().for_each(|e| e.check_tree());
+        database.tables.read().unwrap().iter().for_each(|e| e.check());
 
         database
     }
@@ -274,7 +328,7 @@ mod tests {
             let receivers: Vec<&'a TableReceiver<Key, Value>> = receivers.into_iter().collect();
 
             for table in &tables {
-                table.check_tree();
+                table.check();
             }
 
             let table_held = tables.iter().map(|table| table.root());
