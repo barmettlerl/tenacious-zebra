@@ -49,7 +49,7 @@ use talk::{
 /// # Examples
 ///
 /// ```
-/// use zebra::map::Map;
+/// use tenaciouszebra::map::Map;
 ///
 /// // Type inference lets us omit an explicit type signature (which
 /// // would be `Map<str, str>` in this example).
@@ -162,7 +162,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use zebra::map::Map;
+    /// use tenaciouszebra::map::Map;
     ///
     /// let mut tree: Map<&str, i32> = Map::new();
     /// ```
@@ -192,7 +192,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use zebra::map::Map;
+    /// use tenaciouszebra::map::Map;
     ///
     /// let mut map: Map<&str, i32> = Map::new();
     /// map.insert("alice", 31);
@@ -221,7 +221,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use zebra::map::Map;
+    /// use tenaciouszebra::map::Map;
     ///
     /// let mut map = Map::new();
     /// map.insert(1, "a");
@@ -251,7 +251,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use zebra::map::Map;
+    /// use tenaciouszebra::map::Map;
     ///
     /// let mut map = Map::new();
     /// assert_eq!(map.insert("Alice", 1).unwrap(), None);
@@ -282,7 +282,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use zebra::map::Map;
+    /// use tenaciouszebra::map::Map;
     ///
     /// let mut map = Map::new();
     ///
@@ -320,8 +320,8 @@ where
     /// # Examples
     ///
     /// ```
-    /// use zebra::map::Map;
-    /// use zebra::map::errors::MapError;
+    /// use tenaciouszebra::map::Map;
+    /// use tenaciouszebra::map::errors::MapError;
     ///
     /// let mut map = Map::new();
     ///
@@ -382,8 +382,8 @@ where
     /// # Examples
     ///
     /// ```
-    /// use zebra::map::Map;
-    /// use zebra::map::errors::MapError;
+    /// use tenaciouszebra::map::Map;
+    /// use tenaciouszebra::map::errors::MapError;
     ///
     /// let mut map = Map::new();
     ///

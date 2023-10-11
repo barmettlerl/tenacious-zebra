@@ -2,7 +2,7 @@ use std::{sync::{RwLock, Arc}, path::Path, io::{Write, Read}};
 use serde::{Serialize, de::DeserializeOwned};
 use bincode;
 use crate::{
-    common::{store::Field, data},
+    common::{store::Field},
     database::{
         store::{Cell, Store},
         Table, TableReceiver,
@@ -44,7 +44,7 @@ use super::store::Label;
 ///
 /// ```rust
 ///
-/// use zebra::database::{Database, Table, TableTransaction, TableResponse, Query};
+/// use tenaciouszebra::database::{Database, Table, TableTransaction, TableResponse, Query};
 ///
 /// fn main() {
 ///     // Type inference lets us omit an explicit type signature (which
@@ -67,7 +67,7 @@ use super::store::Label;
 ///     // Let's remove "Alice" and set "Bob".
 ///     let mut modify = TableTransaction::new();
 ///     modify.remove(&"Alice".to_string()).unwrap();
-///     modify.set(&"Bob".to_string(), 23).unwrap();
+///     modify.set("Bob".to_string(), 23).unwrap();
 ///
 ///     // Ignore the response (modify only)
 ///     let _ = table.execute(modify);
@@ -101,7 +101,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use zebra::database::Database;
+    /// use tenaciouszebra::database::{Database, TableTransaction};
     /// let mut database: Database<String, i32> = Database::new();
     /// ```
     pub fn new() -> Self {
@@ -131,7 +131,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use zebra::database::Database;
+    /// use tenaciouszebra::database::{Database, TableTransaction};
     /// let mut database: Database<String, i32> = Database::new();
     ///
     /// let table = database.empty_table("test");
@@ -151,7 +151,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use zebra::database::Database;
+    /// use tenaciouszebra::database::{Database, TableTransaction};
     /// let mut database: Database<String, i32> = Database::new();
     ///
     /// let mut receiver = database.receive();
@@ -186,7 +186,7 @@ impl<Key, Value> Database<Key, Value>
     /// 
     /// ```
     ///
-    /// use zebra::database::Database;
+    /// use tenaciouszebra::database::{Database, TableTransaction};
     /// let database = Database::new();
     /// 
     /// let mut modify = TableTransaction::new();
@@ -232,7 +232,7 @@ impl<Key, Value> Database<Key, Value>
     /// 
     /// ```
     ///
-    /// use zebra::database::Database;
+    /// use tenaciouszebra::database::{Database, TableTransaction};
     /// let database = Database::new();
     /// 
     /// let mut modify = TableTransaction::new();

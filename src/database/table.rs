@@ -73,7 +73,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use zebra::database::{Database, TableTransaction};
+    /// use tenaciouszebra::database::{Database, TableTransaction};
     ///
     /// fn main() {
     ///
@@ -149,7 +149,7 @@ where
     /// to a [`TableReceiver`] of another [`Database`]. For details on how to use
     /// Senders and Receivers check their respective documentation.
     /// ```
-    /// use zebra::database::Database;
+    /// use tenaciouszebra::database::Database;
     ///
     /// let mut database: Database<u32, u32> = Database::new();
     /// let original = database.empty_table("test");
@@ -290,7 +290,7 @@ mod tests {
         map.check_tree();
         map.assert_records([]);
 
-        table.check_tree();
+        table.check();
         table.assert_records([]);
     }
 
@@ -311,7 +311,7 @@ mod tests {
         map.check_tree();
         map.assert_records([]);
 
-        table.check_tree();
+        table.check();
         table.assert_records((0..1024).map(|i| (i, i)));
     }
 
@@ -332,7 +332,7 @@ mod tests {
         map.check_tree();
         map.assert_records([(33, 33)]);
 
-        table.check_tree();
+        table.check();
         table.assert_records((0..1024).map(|i| (i, i)));
     }
 
@@ -354,7 +354,7 @@ mod tests {
         map.check_tree();
         map.assert_records((0..512).map(|i| (i, i)));
 
-        table.check_tree();
+        table.check();
         table.assert_records((0..1024).map(|i| (i, i)));
     }
 
@@ -374,7 +374,7 @@ mod tests {
         map.check_tree();
         map.assert_records((0..1024).map(|i| (i, i)));
 
-        table.check_tree();
+        table.check();
         table.assert_records((0..1024).map(|i| (i, i)));
     }
 

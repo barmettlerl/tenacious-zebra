@@ -1,5 +1,5 @@
 [package]
-name = "tenacious-zebra"
+name = "tenaciouszebra"
 version = "0.1.0"
 authors = ["Matteo Monti <matteo.monti@epfl.ch>", "Manuel Vidigueira <manuel.ribeirovidigueira@epfl.ch>", "Lars Barmettler <lars.barmettler@epfl.ch"]
 edition = "2018"
@@ -16,6 +16,7 @@ doomstack = { git = "https://github.com/Distributed-EPFL/doomstack" }
 rayon = { version = "1.5.1" }
 bit-vec = { version = "0.6", features = ["serde"] }
 bincode = { version = "1" }
+okaywal = "0.2.0"
 
 [dev-dependencies]
 rand = { version = "0.8.4" }
