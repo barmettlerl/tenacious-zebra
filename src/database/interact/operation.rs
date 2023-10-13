@@ -5,9 +5,10 @@ use crate::{
 
 use doomstack::Top;
 
+use serde::{Serialize, Deserialize};
 use talk::crypto::primitives::{hash, hash::HashError};
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct Operation<Key: Field, Value: Field> {
     pub path: Path,
     pub action: Action<Key, Value>,
