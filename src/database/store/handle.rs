@@ -9,17 +9,13 @@ use crate::{
 
 use oh_snap::Snap;
 
-use core::fmt;
 use std::{
     collections::{hash_map::Entry, HashMap},
     hash::Hash as StdHash,
-    ptr, sync::RwLock, fmt::Formatter,
+    ptr, sync::RwLock,
 };
 
 use talk::crypto::primitives::hash::Hash;
-
-use std::fmt::Debug;
- 
 
 pub(crate) struct Handle<Key: Field, Value: Field> {
     pub cell: Cell<Key, Value>,
@@ -146,18 +142,5 @@ where
         let mut store = self.cell.take();
         drop::drop(&mut store, self.root.read().unwrap().clone());
         self.cell.restore(store);
-    }
-}
-
-impl <Key, Value> Debug for Handle<Key, Value>
-where
-    Key: Field + Debug,
-    Value: Field + Debug,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Handle")
-            .field("cell", &self.cell.take())
-            .field("root", &self.root)
-            .finish()
     }
 }

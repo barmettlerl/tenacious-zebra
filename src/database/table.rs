@@ -35,7 +35,6 @@ use super::store::{Store, Node, Wrap};
 /// [`TableSender`]: crate::database::TableSender
 /// [`TableReceiver`]: crate::database::TableReceiver
 
-#[derive(Debug)]
 pub struct Table<Key: Field, Value: Field>(Handle<Key, Value>, String);
 
 impl<Key, Value> Table<Key, Value>
