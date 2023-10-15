@@ -1,4 +1,4 @@
-use std::{sync::{RwLock, Arc}, path::Path, io::{Write, Read}};
+use std::{sync::{RwLock, Arc}, path::Path, io::{Write, Read}, fmt::{Debug, Formatter, self}};
 use serde::{Serialize, de::DeserializeOwned};
 use bincode;
 use crate::{
@@ -271,8 +271,22 @@ impl<Key, Value> Database<Key, Value>
         database.tables.read().unwrap().iter().for_each(|e| e.check());
 
         database
+    }    
+}
+
+impl<Key, Value> Debug for Database<Key, Value> 
+where 
+    Key: Field + Debug,
+    Value: Field + Debug,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let store = self.store.take();
+        let tables = self.tables.read().unwrap().clone();
+        f.debug_struct("Database")
+            .field("store", &store)
+            .field("tables", &tables)
+            .finish()
     }
-    
 }
 
 impl<Key, Value> Clone for Database<Key, Value>
