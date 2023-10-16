@@ -17,29 +17,28 @@ use std::{
     },
     iter,
 };
+use rocksdb::DB;
 
-pub(crate) type EntryMap<Key, Value> = HashMap<Bytes, Entry<Key, Value>>;
+pub(crate) type EntryMap = DB;
 pub(crate) type EntryMapEntry<'a, Key, Value> = HashMapEntry<'a, Bytes, Entry<Key, Value>>;
 
 pub(crate) const DEPTH: u8 = 8;
 
 #[derive(Serialize, Deserialize)]
-pub(crate) struct Store<Key: Field, Value: Field> {
-    maps: Snap<EntryMap<Key, Value>>,
+pub(crate) struct Store{
+    maps: Snap<EntryMap>,
     scope: Prefix,
 }
 
-impl<Key, Value> Store<Key, Value>
+impl<Key, Value> Store
 where
     Key: Field,
     Value: Field,
 {
-    pub fn new() -> Self {
+    pub fn new(path: &str) -> Self {
         Store {
             maps: Snap::new(
-                iter::repeat_with(|| EntryMap::new())
-                    .take(1 << DEPTH)
-                    .collect(),
+                (0.. (1 << DEPTH)).map(|id| DB::open_default(format!("{}/{}", path, id))).collect()
             ),
             scope: Prefix::root(),
         }
