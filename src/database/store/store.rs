@@ -23,6 +23,7 @@ pub(crate) type EntryMap = DB;
 pub(crate) type EntryMapEntry<Key, Value> = Option<(Bytes, Entry<Key, Value>)>;
 
 pub(crate) const DEPTH: u8 = 8;
+pub(crate) const PATH: &str = "db_backup";
 
 pub(crate) struct Store<Key: Field, Value: Field>{
     maps: Snap<EntryMap>,
@@ -35,10 +36,10 @@ where
     Key: Field + Deserialize<'de>,
     Value: Field + Deserialize<'de>,
 {
-    pub fn new(path: &str) -> Self {
+    pub fn new() -> Self {
         Store {
             maps: Snap::new(
-                (0.. (1 << DEPTH)).map(|id| DB::open_default(format!("{}/{}", path, id))).filter(|db| db.is_ok()).map(|db| db.unwrap()).collect(),
+                (0.. (1 << DEPTH)).map(|id| DB::open_default(format!("{}/{}", PATH, id))).filter(|db| db.is_ok()).map(|db| db.unwrap()).collect(),
             ),
             scope: Prefix::root(),
             phantom: std::marker::PhantomData,
