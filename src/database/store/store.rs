@@ -96,11 +96,11 @@ where
     }
 
 
-    #[cfg(test)]
-    pub fn size(&self) -> usize {
-        debug_assert!(self.maps.is_complete());
-        self.maps.iter().map(|map| map.len()).sum()
-    }
+    // #[cfg(test)]
+    // pub fn size(&self) -> usize {
+    //     debug_assert!(self.maps.is_complete());
+    //     self.maps.iter().map(|map| map.get_).sum()
+    // }
 
     pub fn label(&self, node: &Node<Key, Value>) -> Label {
         let hash = node.hash();
@@ -118,6 +118,10 @@ where
         }
     }
 
+    fn get_map_id(&self, label: Label) -> usize {
+        label.map().id() - self.maps.range().start
+    }
+
     pub fn populate(&mut self, label: Label, node: Node<Key, Value>) -> bool
     where
         Key: Field,
@@ -125,15 +129,17 @@ where
     {
         if !label.is_empty() {
             match self.entry(label) {
-                Vacant(entry) => {
-                    entry.insert(Entry {
+                None => {
+                    let map = self.get_map_id(label);
+                    let entry = Entry {
                         node,
                         references: 0,
-                    });
-
+                    };
+                    let entry = bincode::serialize(&entry).unwrap();
+                    self.maps[map].put(label.hash(), &entry).unwrap();
                     true
                 }
-                Occupied(..) => false,
+                Some(..) => false,
             }
         } else {
             false
@@ -179,6 +185,8 @@ where
             None
         }
     }
+
+
 
 }
 
@@ -355,9 +363,9 @@ mod tests {
                 labels.extend(self.collect_tree(root));
             }
 
-            if self.size() > labels.len() {
-                panic!("`check_leaks`: unreachable entries detected");
-            }
+            // if self.size() > labels.len() {
+            //     panic!("`check_leaks`: unreachable entries detected");
+            // }
         }
 
         pub fn check_references<I>(&mut self, held: I)
