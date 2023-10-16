@@ -20,27 +20,28 @@ use std::{
 use rocksdb::DB;
 
 pub(crate) type EntryMap = DB;
-pub(crate) type EntryMapEntry<'a, Key, Value> = HashMapEntry<'a, Bytes, Entry<Key, Value>>;
+pub(crate) type EntryMapEntry<Key, Value> = Option<(Bytes, Entry<Key, Value>)>;
 
 pub(crate) const DEPTH: u8 = 8;
 
-#[derive(Serialize, Deserialize)]
-pub(crate) struct Store{
+pub(crate) struct Store<Key: Field, Value: Field>{
     maps: Snap<EntryMap>,
     scope: Prefix,
+    phantom: std::marker::PhantomData<(Key, Value)>,
 }
 
-impl<Key, Value> Store
+impl<'de, Key, Value> Store<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Deserialize<'de>,
+    Value: Field + Deserialize<'de>,
 {
     pub fn new(path: &str) -> Self {
         Store {
             maps: Snap::new(
-                (0.. (1 << DEPTH)).map(|id| DB::open_default(format!("{}/{}", path, id))).collect()
+                (0.. (1 << DEPTH)).map(|id| DB::open_default(format!("{}/{}", path, id))).filter(|db| db.is_ok()).map(|db| db.unwrap()).collect(),
             ),
             scope: Prefix::root(),
+            phantom: std::marker::PhantomData,
         }
     }
 
@@ -48,6 +49,7 @@ where
         Store {
             maps: Snap::merge(right.maps, left.maps),
             scope: left.scope.ancestor(1),
+            phantom: std::marker::PhantomData,
         }
     }
 
@@ -60,11 +62,13 @@ where
             let left = Store {
                 maps: left_maps,
                 scope: self.scope.left(),
+                phantom: std::marker::PhantomData,
             };
 
             let right = Store {
                 maps: right_maps,
                 scope: self.scope.right(),
+                phantom: std::marker::PhantomData,
             };
 
             Split::Split(left, right)
@@ -77,7 +81,17 @@ where
     pub fn entry(&mut self, label: Label) -> EntryMapEntry<Key, Value> {
         let map = label.map().id() - self.maps.range().start;
         let hash = label.hash();
-        self.maps[map].entry(hash)
+        let entry = self.maps[map].get(hash).unwrap();
+
+        match self.maps[map].get(hash) {
+            Ok(Some(entry)) => {
+                let entry = bincode::deserialize::<Entry<Key, Value>>(&entry).unwrap();
+                Some((hash, entry))
+            }
+            Ok(None) => None,
+            Err(e) => panic!("Error while reading from database: {}", e),
+        }
+        
     }
 
 
