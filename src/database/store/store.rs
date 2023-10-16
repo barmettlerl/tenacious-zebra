@@ -193,10 +193,10 @@ mod tests {
 
     use std::{collections::HashSet, fmt::Debug, hash::Hash};
 
-    impl<Key, Value> Store<Key, Value>
+    impl<'de, Key, Value> Store<Key, Value>
     where
-        Key: Field,
-        Value: Field,
+        Key: Field + Deserialize<'de>,
+        Value: Field + Deserialize<'de>,
     {
         pub fn raw_leaves<I>(leaves: I) -> (Self, Vec<Label>)
         where
@@ -219,8 +219,8 @@ mod tests {
                     };
 
                     match store.entry(label) {
-                        EntryMapEntry::Vacant(entrymapentry) => {
-                            entrymapentry.insert(entry);
+                        None => {
+                            store.populate(label, node);
                         }
                         _ => unreachable!(),
                     }
@@ -234,8 +234,8 @@ mod tests {
 
         pub fn fetch_node(&mut self, label: Label) -> Node<Key, Value> {
             match self.entry(label) {
-                Occupied(entry) => entry.get().node.clone(),
-                Vacant(..) => panic!("`fetch_node`: node not found"),
+                Some((_, entry)) => entry.node.clone(),
+                None => panic!("`fetch_node`: node not found"),
             }
         }
 
@@ -486,8 +486,8 @@ mod tests {
             };
 
             match store.entry(label) {
-                EntryMapEntry::Occupied(..) => {}
-                _ => {
+                Some(..) => {}
+                None => {
                     unreachable!();
                 }
             }
@@ -500,10 +500,8 @@ mod tests {
             };
 
             match store.entry(label) {
-                EntryMapEntry::Occupied(..) => {}
-                _ => {
-                    unreachable!();
-                }
+                Some(..) => {}
+                None => unreachable!()
             }
         }
     }
@@ -535,16 +533,14 @@ mod tests {
 
         for (index, label) in labels.into_iter().enumerate() {
             match store.entry(label) {
-                EntryMapEntry::Occupied(entry) => match &entry.get().node {
+                Some((_, entry)) => match entry.node {
                     Node::Leaf(key, value) => {
-                        assert_eq!(*key, wrap!(index));
-                        assert_eq!(*value, wrap!(index));
+                        assert_eq!(key, wrap!(index));
+                        assert_eq!(value, wrap!(index));
                     }
                     _ => unreachable!(),
                 },
-                _ => {
-                    unreachable!();
-                }
+                None => unreachable!()
             }
         }
     }
