@@ -24,7 +24,21 @@ Finding out whether two different nodes have the same data or not can be efficie
 </p>
 
 ### Merkle Patricia Trie
-TODO
+It's a combination of the Patricia Tree's structure and the cryptographic verification and efficiency of the Merkle Tree.
+
+- **Storing Data:** When data is added to the tree, it's split up and each piece of data gets its path based on its content. This ensures that every piece of data has a unique path.
+- **Verification:** Due to the Merkle properties, you can prove that a particular piece of data is in the tree without seeing the entire tree. You only need a path from your data up to the top (the Merkle proofs). If the hashes along the way match up, you can be certain that your piece of data is indeed in the tree.
+- **Changing Data:** When data in the tree is updated or changed, only the path from the changed data to the root will need to be recalculated. This ensures efficiency when updating the tree.
+- **Hashing:** Each node in the tree is hashed, starting from the leaf nodes and moving up to the root. This creates a cascading effect; a small change in a leaf node will produce a completely different root hash.
+- **Root Hash:** The root hash represents the entire state. In Ethereum, this allows for quick and cryptographic verification of any part of the data.
+
+The primary advantages of the Merkle Patricia Tree in Ethereum are:
+
+- Efficiency: It minimizes storage by avoiding storing redundant chunks of data.
+
+- Cryptography: It allows for quick and secure verification of large sets of data.
+
+- Decentralization: Its cryptographic properties are perfect for decentralized systems like blockchains where verification and trust are paramount.
 
 ### Parallel execution
 <p align="center">
