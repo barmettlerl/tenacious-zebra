@@ -7,10 +7,10 @@ use crate::{
 
 use std::collections::LinkedList;
 
-fn get<'de, Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Node<Key, Value>
+fn get<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Node<Key, Value>
 where
-    Key: Field + Deserialize<'de>,
-    Value: Field + Deserialize<'de>,
+    Key: Field,
+    Value: Field,
 {
     if !label.is_empty() {
         match store.entry(label) {
@@ -24,7 +24,7 @@ where
     }
 }
 
-pub(crate) fn branch<'de, Key, Value>(
+pub(crate) fn branch< Key, Value>(
     store: Store<Key, Value>,
     lho_recursion: Option<(Label, Label)>,
     rho_recursion: Option<(Label, Label)>,
@@ -34,8 +34,8 @@ pub(crate) fn branch<'de, Key, Value>(
     LinkedList<(Wrap<Key>, Wrap<Value>)>,
 )
 where
-    Key: Field + Deserialize<'de>,
-    Value: Field + Deserialize<'de>,
+    Key: Field,
+    Value: Field,
 {
     let (lho_left, lho_right) = match lho_recursion {
         Some((lho_left, lho_right)) => (Some(lho_left), Some(lho_right)),
@@ -101,7 +101,7 @@ where
     (store, lho_candidates, rho_candidates)
 }
 
-pub(crate) fn recur<'de, Key, Value>(
+pub(crate) fn recur< Key, Value>(
     mut store: Store<Key, Value>,
     lho_node: Option<Label>,
     rho_node: Option<Label>,
@@ -111,8 +111,8 @@ pub(crate) fn recur<'de, Key, Value>(
     LinkedList<(Wrap<Key>, Wrap<Value>)>,
 )
 where
-    Key: Field + Deserialize<'de>,
-    Value: Field + Deserialize<'de>,
+    Key: Field,
+    Value: Field,
 {
     if lho_node != rho_node {
         let mut lho_collector = LinkedList::new();
@@ -154,7 +154,7 @@ where
     }
 }
 
-pub(crate) fn diff<'de, Key, Value>(
+pub(crate) fn diff< Key, Value>(
     store: Store<Key, Value>,
     lho_root: Label,
     rho_root: Label,
@@ -164,8 +164,8 @@ pub(crate) fn diff<'de, Key, Value>(
     LinkedList<(Wrap<Key>, Wrap<Value>)>,
 )
 where
-    Key: Field + Deserialize<'de>,
-    Value: Field + Deserialize<'de>,
+    Key: Field,
+    Value: Field,
 {
     recur(store, Some(lho_root), Some(rho_root))
 }

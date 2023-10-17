@@ -152,8 +152,8 @@ where
 
         // Check if `label` is already in `store`.
         let hold = match store.entry(label) {
-            Occupied(..) => true,
-            Vacant(..) => false,
+            Some(..) => true,
+            None => false,
         };
 
         if hold {
@@ -208,8 +208,8 @@ where
     fn flush(&mut self, store: &mut Store<Key, Value>, label: Label) {
         if !label.is_empty() {
             let stored = match store.entry(label) {
-                Occupied(..) => true,
-                Vacant(..) => false,
+                Some(..) => true,
+                None => false,
             };
 
             let recursion = if stored {
@@ -312,15 +312,15 @@ mod tests {
         }
     }
 
-    fn run<'de, 'a, Key, Value, I, const N: usize>(
+    fn run<'a, Key, Value, I, const N: usize>(
         database: &Database<Key, Value>,
         tables: I,
         transfers: [(&mut TableSender<Key, Value>, TableReceiver<Key, Value>); N],
     ) -> ([Table<Key, Value>; N], usize)
     where
         I: IntoIterator<Item = &'a Table<Key, Value>>,
-        Key: Field + Serialize + Deserialize<'de>,
-        Value: Field + Serialize + Deserialize<'de>,
+        Key: Field,
+        Value: Field,
     {
         let mut transfers: [Transfer<Key, Value>; N] = array_init::from_iter(
             IntoIterator::into_iter(transfers).map(|(sender, receiver)| {

@@ -65,7 +65,7 @@ where
 
 impl<'de, Inner> Deserialize<'de> for Wrap<Inner>
 where
-    Inner: Field + Deserialize<'de>,
+    Inner: Field,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

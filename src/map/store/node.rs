@@ -1,3 +1,5 @@
+use std::{marker::PhantomData, fmt};
+
 use crate::{
     common::{
         data::Bytes,
@@ -6,9 +8,9 @@ use crate::{
     map::store::Wrap,
 };
 
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de::{DeserializeOwned, Visitor, MapAccess, self}};
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize)]
 pub(crate) enum Node<Key: Field, Value: Field> {
     Empty,
     Internal(Internal<Key, Value>),
@@ -22,11 +24,77 @@ pub(crate) struct Internal<Key: Field, Value: Field> {
     children: Children<Key, Value>,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-struct Children<Key: Field, Value: Field> {
+#[derive(Clone, Serialize)]
+struct Children<Key, Value>
+where
+    Key: Field,
+    Value: Field,
+{
     left: Box<Node<Key, Value>>,
     right: Box<Node<Key, Value>>,
 }
+
+impl<'de, Key, Value> Deserialize<'de> for Children<Key, Value>
+where
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(field_identifier, rename_all = "lowercase")]
+        enum InternalField {
+            Left,
+            Right,
+        }
+
+        struct __Visitor<'de, Key, Value>(PhantomData<(&'de Key, &'de Value)>);
+
+        impl<'de, Key, Value> Visitor<'de> for __Visitor<'de, Key, Value>
+        where
+            Key: Field + DeserializeOwned,
+            Value: Field + DeserializeOwned,
+        {
+            type Value = Children<Key, Value>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("struct Children")
+            }
+
+            fn visit_map<V>(self, mut map: V) -> Result<Self::Value, V::Error>
+            where
+                V: MapAccess<'de>,
+            {
+                let mut left = None;
+                let mut right = None;
+                while let Some(key) = map.next_key()? {
+                    match key {
+                        InternalField::Left => {
+                            if left.is_some() {
+                                return Err(de::Error::duplicate_field("left"));
+                            }
+                            left = Some(map.next_value()?);
+                        }
+                        InternalField::Right => {
+                            if right.is_some() {
+                                return Err(de::Error::duplicate_field("right"));
+                            }
+                            right = Some(map.next_value()?);
+                        }
+                    }
+                }
+                let left = left.ok_or_else(|| de::Error::missing_field("left"))?;
+                let right = right.ok_or_else(|| de::Error::missing_field("right"))?;
+                Ok(Children { left, right })
+            }
+        }
+
+        deserializer.deserialize_map(__Visitor::<Key, Value>(PhantomData))
+    }
+}
+
 
 #[derive(Clone)]
 pub(crate) struct Leaf<Key: Field, Value: Field> {
@@ -34,7 +102,7 @@ pub(crate) struct Leaf<Key: Field, Value: Field> {
     fields: Fields<Key, Value>,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize)]
 struct Fields<Key: Field, Value: Field> {
     key: Wrap<Key>,
     value: Wrap<Value>,
@@ -213,10 +281,23 @@ where
     }
 }
 
+impl<'de, Key, Value> Deserialize<'de> for Node<Key, Value>
+where
+    Key: Field,
+    Value: Field,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Node::deserialize(deserializer)
+    }
+}
+
 impl<'de, Key, Value> Deserialize<'de> for Internal<Key, Value>
 where
-    Key: Field + Deserialize<'de>,
-    Value: Field + Deserialize<'de>,
+    Key: Field,
+    Value: Field,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -240,16 +321,3 @@ where
     }
 }
 
-impl<'de, Key, Value> Deserialize<'de> for Leaf<Key, Value>
-where
-    Key: Field + Deserialize<'de>,
-    Value: Field + Deserialize<'de>,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let fields = Fields::deserialize(deserializer)?;
-        Ok(Leaf::from_fields(fields))
-    }
-}

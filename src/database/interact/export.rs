@@ -10,10 +10,10 @@ use crate::{
 use oh_snap::Snap;
 use serde::Deserialize;
 
-fn get<'de, Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Node<Key, Value>
+fn get<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Node<Key, Value>
 where
-    Key: Field + Deserialize<'de>,
-    Value: Field + Deserialize<'de>,
+    Key: Field,
+    Value: Field,
 {
     if !label.is_empty() {
         match store.entry(label) {
@@ -34,7 +34,7 @@ fn split(paths: Snap<Path>, depth: u8) -> (Snap<Path>, Snap<Path>) {
     (left, right)
 }
 
-fn branch<'de, Key, Value>(
+fn branch<Key, Value>(
     store: Store<Key, Value>,
     depth: u8,
     paths: Snap<Path>,
@@ -42,8 +42,8 @@ fn branch<'de, Key, Value>(
     right: Label,
 ) -> (Store<Key, Value>, MapNode<Key, Value>, MapNode<Key, Value>)
 where
-    Key: Field + Clone + Deserialize<'de>,
-    Value: Field + Clone + Deserialize<'de>,
+    Key: Field + Clone,
+    Value: Field + Clone,
 {
     let (left_paths, right_paths) = split(paths, depth);
 
@@ -66,15 +66,15 @@ where
     }
 }
 
-fn recur<'de, Key, Value>(
+fn recur<Key, Value>(
     mut store: Store<Key, Value>,
     node: Label,
     depth: u8,
     paths: Snap<Path>,
 ) -> (Store<Key, Value>, MapNode<Key, Value>)
 where
-    Key: Field + Clone + Deserialize<'de>,
-    Value: Field + Clone + Deserialize<'de>,
+    Key: Field + Clone,
+    Value: Field + Clone,
 {
     let hash = node.hash();
 
@@ -100,14 +100,14 @@ where
     }
 }
 
-pub(crate) fn export<'de, Key, Value>(
+pub(crate) fn export<Key, Value>(
     store: Store<Key, Value>,
     root: Label,
     paths: Snap<Path>,
 ) -> (Store<Key, Value>, MapNode<Key, Value>)
 where
-    Key: Field + Clone + Deserialize<'de>,
-    Value: Field + Clone + Deserialize<'de>,
+    Key: Field + Clone,
+    Value: Field + Clone,
 {
     recur(store, root, 0, paths)
 }

@@ -46,10 +46,10 @@ where
     }
 }
 
-fn get<'de, Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Entry<Key, Value>
+fn get<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Entry<Key, Value>
 where
-    Key: Field + Deserialize<'de>,
-    Value: Field + Deserialize<'de>,
+    Key: Field,
+    Value: Field,
 {
     if !label.is_empty() {
         match store.entry(label) {
@@ -67,8 +67,8 @@ where
     }
 }
 
-/// 
-fn branch<'de, Key, Value>(
+/// Responsible to apply the Batch of Operations to the Store.
+fn branch<Key, Value>(
     store: Store<Key, Value>,
     original: Option<&Entry<Key, Value>>,
     preserve: bool,
@@ -79,8 +79,8 @@ fn branch<'de, Key, Value>(
     right: Entry<Key, Value>,
 ) -> (Store<Key, Value>, Batch<Key, Value>, Label)
 where
-    Key: Field + Deserialize<'de>,
-    Value: Field + Deserialize<'de>,
+    Key: Field,
+    Value: Field,
 {
     let preserve_branches = preserve
         || if let Some(original) = original {
@@ -190,7 +190,7 @@ where
     (store, batch, new_label)
 }
 
-fn recur<'de, Key, Value>(
+fn recur<Key, Value>(
     mut store: Store<Key, Value>,
     target: Entry<Key, Value>,
     preserve: bool,
@@ -199,8 +199,8 @@ fn recur<'de, Key, Value>(
     chunk: Chunk,
 ) -> (Store<Key, Value>, Batch<Key, Value>, Label)
 where
-    Key: Field + Deserialize<'de>,
-    Value: Field + Deserialize<'de>,
+    Key: Field,
+    Value: Field,
 {
     match (&target.node, chunk.task(&mut batch)) {
         (_, Task::Pass) => (store, batch, target.label),
@@ -281,14 +281,14 @@ where
     }
 }
 
-pub(crate) fn apply<'de, Key, Value>(
+pub(crate) fn apply<Key, Value>(
     mut store: Store<Key, Value>,
     root: Label,
     batch: Batch<Key, Value>,
 ) -> (Store<Key, Value>, Label, Batch<Key, Value>)
 where
-    Key: Field + Deserialize<'de> + Serialize,
-    Value: Field + Deserialize<'de> + Serialize,
+    Key: Field,
+    Value: Field,
 {
     let root_node = get(&mut store, root);
     let root_chunk = Chunk::root(&batch);

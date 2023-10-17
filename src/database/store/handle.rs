@@ -117,10 +117,10 @@ where
     }
 }
 
-impl<'de, Key, Value> Clone for Handle<Key, Value>
+impl<Key, Value> Clone for Handle<Key, Value>
 where
-    Key: Field + Deserialize<'de>,
-    Value: Field + Deserialize<'de>,
+    Key: Field,
+    Value: Field,
 {
     fn clone(&self) -> Self {
         let mut store = self.cell.take();

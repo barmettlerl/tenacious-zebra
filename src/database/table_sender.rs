@@ -58,11 +58,11 @@ where
     ) -> Result<(), Top<SyncError>> {
         if !label.is_empty() {
             let node = match store.entry(label) {
-                Occupied(entry) => {
-                    let node = entry.get().node.clone();
+                Some((_, entry)) => {
+                    let node = entry.node.clone();
                     Ok(node)
                 }
-                Vacant(..) => SyncError::MalformedQuestion.fail().spot(here!()),
+                None => SyncError::MalformedQuestion.fail().spot(here!()),
             }?;
 
             let recur = match node {
@@ -133,7 +133,7 @@ mod tests {
 
         let mut store = database.store.take();
         let node = match store.entry(label) {
-            Occupied(entry) => entry.get().node.clone(),
+            Some((_, entry)) => entry.node.clone(),
             _ => unreachable!(),
         };
         database.store.restore(store);
@@ -153,17 +153,17 @@ mod tests {
 
         let mut store = database.store.take();
         let n0 = match store.entry(label0) {
-            Occupied(entry) => entry.get().node.clone(),
+            Some((_,entry)) => entry.node.clone(),
             _ => unreachable!(),
         };
         let (n1, n2) = match n0 {
             Node::Internal(label1, label2) => {
                 let n1 = match store.entry(label1) {
-                    Occupied(entry) => entry.get().node.clone(),
+                    Some((_, entry)) => entry.node.clone(),
                     _ => unreachable!(),
                 };
                 let n2 = match store.entry(label2) {
-                    Occupied(entry) => entry.get().node.clone(),
+                    Some((_, entry)) => entry.node.clone(),
                     _ => unreachable!(),
                 };
                 (n1, n2)

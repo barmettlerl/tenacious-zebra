@@ -19,7 +19,7 @@ where
     Value: Field,
 {
     let recursion = match store.entry(label) {
-        Occupied(entry) => match entry.get().node {
+        Some((_, entry)) => match entry.node {
             Node::Internal(Label::Internal(map, hash), _)
             | Node::Internal(_, Label::Internal(map, hash)) => {
                 Recursion::Recur(Label::Internal(map, hash))
@@ -27,7 +27,7 @@ where
             Node::Internal(left, right) => Recursion::Stop(left, right),
             _ => panic!("called `locate` on a non-`Internal` node"),
         },
-        Vacant(..) => unreachable!(),
+        None => unreachable!(),
     };
 
     match recursion {
@@ -45,11 +45,11 @@ where
     Value: Field,
 {
     match store.entry(label) {
-        Occupied(entry) => match &entry.get().node {
+        Some((_, entry)) => match &entry.node {
             Node::Leaf(key, _) => Path::from(key.digest()),
             _ => unreachable!(),
         },
-        Vacant(..) => unreachable!(),
+        None => unreachable!(),
     }
 }
 

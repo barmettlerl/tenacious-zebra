@@ -32,10 +32,10 @@ pub(crate) struct Store<Key: Field, Value: Field>{
 }
 
 
-impl<'de, Key, Value> Store<Key, Value>
+impl<Key, Value> Store<Key, Value>
 where
-    Key: Field + Deserialize<'de>,
-    Value: Field + Deserialize<'de>,
+    Key: Field,
+    Value: Field,
 {
     fn merge_reference_counter(_: &[u8], existing_val: Option<&[u8]>, operands: &MergeOperands) -> Option<Vec<u8>>{
 
@@ -242,10 +242,10 @@ mod tests {
 
     use std::{collections::HashSet, fmt::Debug, hash::Hash};
 
-    impl<'de, Key, Value> Store<Key, Value>
+    impl<Key, Value> Store<Key, Value>
     where
-        Key: Field + Deserialize<'de>,
-        Value: Field + Deserialize<'de>,
+        Key: Field,
+        Value: Field,
     {
         pub fn raw_leaves<I>(leaves: I) -> (Self, Vec<Label>)
         where
@@ -343,10 +343,10 @@ mod tests {
         }
 
         pub fn check_tree(&mut self, root: Label) {
-            fn recursion<'de, Key, Value>(store: &mut Store<Key, Value>, label: Label, location: Prefix)
+            fn recursion<Key, Value>(store: &mut Store<Key, Value>, label: Label, location: Prefix)
             where
-                Key: Field + Deserialize<'de>,
-                Value: Field + Deserialize<'de>,
+                Key: Field,
+                Value: Field,
             {
                 match label {
                     Label::Internal(..) => {
@@ -369,13 +369,13 @@ mod tests {
         pub fn collect_tree(&mut self, root: Label) -> HashSet<Label> {
             let mut collector = HashSet::new();
 
-            fn recursion<'de, Key, Value>(
+            fn recursion<Key, Value>(
                 store: &mut Store<Key, Value>,
                 label: Label,
                 collector: &mut HashSet<Label>,
             ) where
-                Key: Field + Deserialize<'de>,
-                Value: Field + Deserialize<'de>,
+                Key: Field,
+                Value: Field,
             {
                 if !label.is_empty() {
                     collector.insert(label);
@@ -417,13 +417,13 @@ mod tests {
                 External(usize),
             }
 
-            fn recursion<'de, Key, Value>(
+            fn recursion<Key, Value>(
                 store: &mut Store<Key, Value>,
                 label: Label,
                 references: &mut HashMap<Label, HashSet<Reference>>,
             ) where
-                Key: Field + Deserialize<'de>,
-                Value: Field + Deserialize<'de>,
+                Key: Field,
+                Value: Field,
             {
                 if let Label::Internal(..) = label {
                     let (left, right) = store.fetch_internal(label);
@@ -467,13 +467,13 @@ mod tests {
             Key: Clone + Eq + Hash,
             Value: Clone,
         {
-            fn recursion<'de, Key, Value>(
+            fn recursion<Key, Value>(
                 store: &mut Store<Key, Value>,
                 label: Label,
                 collector: &mut HashMap<Key, Value>,
             ) where
-                Key: Field + Clone + Eq + Hash + Deserialize<'de>,
-                Value: Field + Clone + Deserialize<'de>,
+                Key: Field + Clone + Eq + Hash,
+                Value: Field + Clone,
             {
                 match label {
                     Label::Internal(..) => {

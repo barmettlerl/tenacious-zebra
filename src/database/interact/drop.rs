@@ -5,10 +5,10 @@ use crate::{
     database::store::{Label, Node, Store},
 };
 
-pub(crate) fn drop<'de, Key, Value>(store: &mut Store<Key, Value>, label: Label)
+pub(crate) fn drop< Key, Value>(store: &mut Store<Key, Value>, label: Label)
 where
-    Key: Field + Deserialize<'de>,
-    Value: Field + Deserialize<'de>,
+    Key: Field,
+    Value: Field,
 {
     match store.decref(label, false) {
         Some(Node::Internal(left, right)) => {

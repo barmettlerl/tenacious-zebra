@@ -177,10 +177,8 @@ where
         }
 
         for child in [left, right] {
-            if child != Label::Empty {
-                if let Vacant(..) = store.entry(child) {
+            if child != Label::Empty && store.entry(child).is_none(){
                     panic!("`check_internal`: child not found");
-                }
             }
         }
     }
@@ -194,8 +192,8 @@ where
 
     fn fetch_node(store: &mut Store<Key,Value>, label: Label) -> Node<Key, Value> {
         match store.entry(label) {
-            Occupied(entry) => entry.get().node.clone(),
-            Vacant(..) => panic!("`fetch_node`: node not found"),
+            Some((_, entry)) => entry.node.clone(),
+            None => panic!("`fetch_node`: node not found"),
         }
     }
 
