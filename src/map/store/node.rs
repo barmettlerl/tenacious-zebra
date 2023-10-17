@@ -1,5 +1,3 @@
-use std::{marker::PhantomData, fmt};
-
 use crate::{
     common::{
         data::Bytes,
@@ -10,10 +8,12 @@ use crate::{
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de::{DeserializeOwned, Visitor, MapAccess, self}};
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub(crate) enum Node<Key: Field, Value: Field> {
     Empty,
+    #[serde(bound = "")]
     Internal(Internal<Key, Value>),
+    #[serde(bound = "")]
     Leaf(Leaf<Key, Value>),
     Stub(Stub),
 }
@@ -24,87 +24,31 @@ pub(crate) struct Internal<Key: Field, Value: Field> {
     children: Children<Key, Value>,
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 struct Children<Key, Value>
 where
     Key: Field,
     Value: Field,
 {
+    #[serde(bound = "")]
     left: Box<Node<Key, Value>>,
+    #[serde(bound = "")]
     right: Box<Node<Key, Value>>,
 }
 
-impl<'de, Key, Value> Deserialize<'de> for Children<Key, Value>
-where
-    Key: Field + DeserializeOwned,
-    Value: Field + DeserializeOwned,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        #[derive(Deserialize)]
-        #[serde(field_identifier, rename_all = "lowercase")]
-        enum InternalField {
-            Left,
-            Right,
-        }
 
-        struct __Visitor<'de, Key, Value>(PhantomData<(&'de Key, &'de Value)>);
-
-        impl<'de, Key, Value> Visitor<'de> for __Visitor<'de, Key, Value>
-        where
-            Key: Field + DeserializeOwned,
-            Value: Field + DeserializeOwned,
-        {
-            type Value = Children<Key, Value>;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("struct Children")
-            }
-
-            fn visit_map<V>(self, mut map: V) -> Result<Self::Value, V::Error>
-            where
-                V: MapAccess<'de>,
-            {
-                let mut left = None;
-                let mut right = None;
-                while let Some(key) = map.next_key()? {
-                    match key {
-                        InternalField::Left => {
-                            if left.is_some() {
-                                return Err(de::Error::duplicate_field("left"));
-                            }
-                            left = Some(map.next_value()?);
-                        }
-                        InternalField::Right => {
-                            if right.is_some() {
-                                return Err(de::Error::duplicate_field("right"));
-                            }
-                            right = Some(map.next_value()?);
-                        }
-                    }
-                }
-                let left = left.ok_or_else(|| de::Error::missing_field("left"))?;
-                let right = right.ok_or_else(|| de::Error::missing_field("right"))?;
-                Ok(Children { left, right })
-            }
-        }
-
-        deserializer.deserialize_map(__Visitor::<Key, Value>(PhantomData))
-    }
-}
-
-
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub(crate) struct Leaf<Key: Field, Value: Field> {
     hash: Bytes,
+    #[serde(bound = "")]
     fields: Fields<Key, Value>,
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Deserialize)]
 struct Fields<Key: Field, Value: Field> {
+    #[serde(bound = "")]
     key: Wrap<Key>,
+    #[serde(bound = "")]
     value: Wrap<Value>,
 }
 
@@ -140,31 +84,19 @@ where
     }
 
     pub fn is_empty(&self) -> bool {
-        match self {
-            Node::Empty => true,
-            _ => false,
-        }
+        matches!(self, Node::Empty)
     }
 
     pub fn is_internal(&self) -> bool {
-        match self {
-            Node::Internal(_) => true,
-            _ => false,
-        }
+        matches!(self, Node::Internal(_))
     }
 
     pub fn is_leaf(&self) -> bool {
-        match self {
-            Node::Leaf(_) => true,
-            _ => false,
-        }
+        matches!(self, Node::Leaf(_))
     }
 
     pub fn is_stub(&self) -> bool {
-        match self {
-            Node::Stub(_) => true,
-            _ => false,
-        }
+        matches!(self, Node::Stub(_))
     }
 }
 
@@ -236,7 +168,7 @@ where
 
     pub(crate) fn raw(hash: Bytes, key: Wrap<Key>, value: Wrap<Value>) -> Self {
         Leaf {
-            hash: hash,
+            hash,
             fields: Fields { key, value },
         }
     }
@@ -281,19 +213,6 @@ where
     }
 }
 
-impl<'de, Key, Value> Deserialize<'de> for Node<Key, Value>
-where
-    Key: Field,
-    Value: Field,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        Node::deserialize(deserializer)
-    }
-}
-
 impl<'de, Key, Value> Deserialize<'de> for Internal<Key, Value>
 where
     Key: Field,
@@ -308,16 +227,5 @@ where
     }
 }
 
-impl<Key, Value> Serialize for Leaf<Key, Value>
-where
-    Key: Field,
-    Value: Field,
-{
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        self.fields.serialize(serializer)
-    }
-}
+
 

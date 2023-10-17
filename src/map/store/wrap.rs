@@ -3,7 +3,7 @@ use crate::common::{data::Bytes, store::Field};
 use doomstack::Top;
 
 use serde::{de::Error as DeError, Deserialize, Deserializer, Serialize, Serializer};
-
+use serde::{self};
 use talk::crypto::primitives::{hash, hash::HashError};
 
 #[derive(Debug, Clone)]
