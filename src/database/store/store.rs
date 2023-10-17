@@ -17,7 +17,7 @@ use std::{
     },
     iter,
 };
-use rocksdb::DB;
+use rocksdb::{DB, Options, MergeOperands};
 
 pub(crate) type EntryMap = DB;
 pub(crate) type EntryMapEntry<Key, Value> = Option<(Bytes, Entry<Key, Value>)>;
@@ -31,12 +31,44 @@ pub(crate) struct Store<Key: Field, Value: Field>{
     phantom: std::marker::PhantomData<(Key, Value)>,
 }
 
+
 impl<'de, Key, Value> Store<Key, Value>
 where
     Key: Field + Deserialize<'de>,
     Value: Field + Deserialize<'de>,
 {
+    fn merge_reference_counter(_: &[u8], existing_val: Option<&[u8]>, operands: &MergeOperands) -> Option<Vec<u8>>{
+
+            if existing_val.is_none() {
+                return None;
+            }
+
+            let mut existing_val: Entry<Key, Value> = bincode::deserialize::<Entry<Key, Value>>(&existing_val.unwrap()).unwrap();
+
+            let mut operands = operands.into_iter().map(|operand| {
+                let operand: Entry<Key, Value> = bincode::deserialize::<Entry<Key, Value>>(&operand).unwrap();
+                operand
+            });
+
+            for operand in operands {
+                existing_val.references += operand.references;
+            }
+
+            if existing_val.references <= 0 {
+                return None;
+            }
+
+            match bincode::serialize(&existing_val) {
+                Ok(val) => Some(val),
+                Err(e) => panic!("Error while serializing: {}", e),
+            }
+    }
+
+    
     pub fn new() -> Self {
+        let mut opts = Options::default();
+        opts.set_merge_operator_associative("merge_reference_counter", Self::merge_reference_counter);
+        opts.create_if_missing(true);
         Store {
             maps: Snap::new(
                 (0.. (1 << DEPTH)).map(|id| DB::open_default(format!("{}/{}", PATH, id))).filter(|db| db.is_ok()).map(|db| db.unwrap()).collect(),
@@ -152,12 +184,10 @@ where
         Value: Field,
     {
         if !label.is_empty() {
-            match self.entry(label) {
-                Occupied(mut entry) => {
-                    entry.get_mut().references += 1;
-                }
-                Vacant(..) => panic!("called `incref` on non-existing node"),
-            }
+            self.maps[self.get_map_id(label)].merge(label.hash(), bincode::serialize(&Entry {
+                node: Node::<Key, Value>::Empty,
+                references: 1,
+            }).unwrap()).unwrap();
         }
     }
 
@@ -166,23 +196,34 @@ where
         Key: Field,
         Value: Field,
     {
-        if !label.is_empty() {
-            match self.entry(label) {
-                Occupied(mut entry) => {
-                    let value = entry.get_mut();
-                    value.references -= 1;
+        if label.is_empty() {
+            return None;
+        }
 
-                    if value.references == 0 && !preserve {
-                        let (_, entry) = entry.remove_entry();
-                        Some(entry.node)
-                    } else {
-                        None
-                    }
-                }
-                Vacant(..) => panic!("called `decref` on non-existing node"),
+        let entry = self.entry(label).unwrap();
+
+        let new_reference = entry.1.references - 1;
+
+        let new_entry = Entry {
+            node: entry.1.node,
+            references: new_reference,
+        };
+
+        // If we are perserve true and the reference count is 0, we want to keep the 
+        // entry in the database even though it is not referenced by any other node.
+        if preserve && new_reference <= 0 {
+            return match self.maps[self.get_map_id(label)].put(label.hash(), bincode::serialize(&new_entry).unwrap()) {
+                Ok(..) => Some(new_entry.node),
+                _ => None,
             }
-        } else {
-            None
+        }
+
+        match self.maps[self.get_map_id(label)].merge(label.hash(), bincode::serialize(&Entry{
+            node: Node::<Key, Value>::Empty,
+            references: -1,
+        }).unwrap()) {
+            Ok(..) => Some(new_entry.node),
+            _ => None,
         }
     }
 
@@ -201,10 +242,10 @@ mod tests {
 
     use std::{collections::HashSet, fmt::Debug, hash::Hash};
 
-    impl<'de, Key, Value> Store<Key, Value>
+    impl< Key, Value> Store<Key, Value>
     where
-        Key: Field + Deserialize<'de>,
-        Value: Field + Deserialize<'de>,
+        Key: Field,
+        Value: Field,
     {
         pub fn raw_leaves<I>(leaves: I) -> (Self, Vec<Label>)
         where
