@@ -8,6 +8,7 @@ use crate::{
 };
 
 use oh_snap::Snap;
+use serde::Deserialize;
 
 use std::{
     collections::{hash_map::Entry, HashMap},
@@ -116,10 +117,10 @@ where
     }
 }
 
-impl<Key, Value> Clone for Handle<Key, Value>
+impl<'de, Key, Value> Clone for Handle<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Deserialize<'de>,
+    Value: Field + Deserialize<'de>,
 {
     fn clone(&self) -> Self {
         let mut store = self.cell.take();

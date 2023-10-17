@@ -1,3 +1,5 @@
+use serde::{Serialize, Deserialize};
+
 use crate::{
     common::{
         store::Field,
@@ -9,11 +11,9 @@ use crate::{
     },
 };
 
-use std::collections::hash_map::Entry::{Occupied, Vacant};
-
 #[derive(Eq, PartialEq)]
 enum References {
-    Applicable(usize),
+    Applicable(i32),
     NotApplicable,
 }
 
@@ -46,29 +46,29 @@ where
     }
 }
 
-fn get<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Entry<Key, Value>
+fn get<'de, Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Entry<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Deserialize<'de>,
+    Value: Field + Deserialize<'de>,
 {
     if !label.is_empty() {
         match store.entry(label) {
-            Occupied(entry) => {
-                let value = entry.get();
+            Some((_, entry)) => {
                 Entry {
                     label,
-                    node: value.node.clone(),
-                    references: References::Applicable(value.references),
+                    node: entry.node.clone(),
+                    references: References::Applicable(entry.references),
                 }
             }
-            Vacant(..) => unreachable!(),
+            None => unreachable!(),
         }
     } else {
         Entry::empty()
     }
 }
 
-fn branch<Key, Value>(
+/// 
+fn branch<'de, Key, Value>(
     store: Store<Key, Value>,
     original: Option<&Entry<Key, Value>>,
     preserve: bool,
@@ -79,8 +79,8 @@ fn branch<Key, Value>(
     right: Entry<Key, Value>,
 ) -> (Store<Key, Value>, Batch<Key, Value>, Label)
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Deserialize<'de>,
+    Value: Field + Deserialize<'de>,
 {
     let preserve_branches = preserve
         || if let Some(original) = original {
@@ -190,7 +190,7 @@ where
     (store, batch, new_label)
 }
 
-fn recur<Key, Value>(
+fn recur<'de, Key, Value>(
     mut store: Store<Key, Value>,
     target: Entry<Key, Value>,
     preserve: bool,
@@ -199,8 +199,8 @@ fn recur<Key, Value>(
     chunk: Chunk,
 ) -> (Store<Key, Value>, Batch<Key, Value>, Label)
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Deserialize<'de>,
+    Value: Field + Deserialize<'de>,
 {
     match (&target.node, chunk.task(&mut batch)) {
         (_, Task::Pass) => (store, batch, target.label),
@@ -281,14 +281,14 @@ where
     }
 }
 
-pub(crate) fn apply<Key, Value>(
+pub(crate) fn apply<'de, Key, Value>(
     mut store: Store<Key, Value>,
     root: Label,
     batch: Batch<Key, Value>,
 ) -> (Store<Key, Value>, Label, Batch<Key, Value>)
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Deserialize<'de> + Serialize,
+    Value: Field + Deserialize<'de> + Serialize,
 {
     let root_node = get(&mut store, root);
     let root_chunk = Chunk::root(&batch);
