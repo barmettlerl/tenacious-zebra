@@ -262,11 +262,6 @@ mod tests {
                     let node = Node::Leaf(key, value);
                     let label = store.label(&node);
 
-                    let entry = Entry {
-                        node,
-                        references: 1,
-                    };
-
                     match store.entry(label) {
                         None => {
                             store.populate(label, node);
