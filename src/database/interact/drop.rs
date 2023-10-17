@@ -1,12 +1,14 @@
+use serde::Deserialize;
+
 use crate::{
     common::store::Field,
     database::store::{Label, Node, Store},
 };
 
-pub(crate) fn drop<Key, Value>(store: &mut Store<Key, Value>, label: Label)
+pub(crate) fn drop<'de, Key, Value>(store: &mut Store<Key, Value>, label: Label)
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Deserialize<'de>,
+    Value: Field + Deserialize<'de>,
 {
     match store.decref(label, false) {
         Some(Node::Internal(left, right)) => {
@@ -109,11 +111,9 @@ mod tests {
                 let result = apply::apply(store, Label::Empty, batch);
                 store = result.0;
                 roots.push(result.1);
-            } else {
-                if let Some(index) = (0..roots.len()).choose(&mut rng) {
-                    drop(&mut store, roots[index]);
-                    roots.remove(index);
-                }
+            } else if let Some(index) = (0..roots.len()).choose(&mut rng) {
+                drop(&mut store, roots[index]);
+                roots.remove(index);
             }
 
             store.check_leaks(roots.clone());

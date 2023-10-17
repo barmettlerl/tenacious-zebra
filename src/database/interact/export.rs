@@ -8,21 +8,19 @@ use crate::{
 };
 
 use oh_snap::Snap;
+use serde::Deserialize;
 
-use std::collections::hash_map::Entry::{Occupied, Vacant};
-
-fn get<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Node<Key, Value>
+fn get<'de, Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Node<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Deserialize<'de>,
+    Value: Field + Deserialize<'de>,
 {
     if !label.is_empty() {
         match store.entry(label) {
-            Occupied(entry) => {
-                let value = entry.get();
-                value.node.clone()
+            Some((_, entry)) => {
+                entry.node.clone()
             }
-            Vacant(..) => unreachable!(),
+            None => unreachable!(),
         }
     } else {
         Node::Empty
@@ -36,7 +34,7 @@ fn split(paths: Snap<Path>, depth: u8) -> (Snap<Path>, Snap<Path>) {
     (left, right)
 }
 
-fn branch<Key, Value>(
+fn branch<'de, Key, Value>(
     store: Store<Key, Value>,
     depth: u8,
     paths: Snap<Path>,
@@ -44,8 +42,8 @@ fn branch<Key, Value>(
     right: Label,
 ) -> (Store<Key, Value>, MapNode<Key, Value>, MapNode<Key, Value>)
 where
-    Key: Field + Clone,
-    Value: Field + Clone,
+    Key: Field + Clone + Deserialize<'de>,
+    Value: Field + Clone + Deserialize<'de>,
 {
     let (left_paths, right_paths) = split(paths, depth);
 
@@ -68,15 +66,15 @@ where
     }
 }
 
-fn recur<Key, Value>(
+fn recur<'de, Key, Value>(
     mut store: Store<Key, Value>,
     node: Label,
     depth: u8,
     paths: Snap<Path>,
 ) -> (Store<Key, Value>, MapNode<Key, Value>)
 where
-    Key: Field + Clone,
-    Value: Field + Clone,
+    Key: Field + Clone + Deserialize<'de>,
+    Value: Field + Clone + Deserialize<'de>,
 {
     let hash = node.hash();
 
@@ -102,14 +100,14 @@ where
     }
 }
 
-pub(crate) fn export<Key, Value>(
+pub(crate) fn export<'de, Key, Value>(
     store: Store<Key, Value>,
     root: Label,
     paths: Snap<Path>,
 ) -> (Store<Key, Value>, MapNode<Key, Value>)
 where
-    Key: Field + Clone,
-    Value: Field + Clone,
+    Key: Field + Clone + Deserialize<'de>,
+    Value: Field + Clone + Deserialize<'de>,
 {
     recur(store, root, 0, paths)
 }
