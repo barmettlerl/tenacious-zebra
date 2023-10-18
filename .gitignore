@@ -90,3 +90,5 @@ $RECYCLE.BIN/
 
 # Code coverage reports
 lcov.info
+
+db_backup/

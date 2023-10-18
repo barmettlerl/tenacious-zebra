@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use talk::crypto::primitives::{hash, hash::HashError};
 
-use std::sync::Arc;
+use std::{sync::Arc, fmt::Display};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct Wrap<Inner: Field> {
@@ -57,3 +57,12 @@ where
 }
 
 impl<Inner> Eq for Wrap<Inner> where Inner: Field {}
+
+impl<Inner> Display for Wrap<Inner>
+where
+    Inner: Field + Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.inner)
+    }
+}

@@ -1,7 +1,7 @@
-use std::sync::Arc;
+use std::{sync::Arc, fmt::Display};
 
 use crate::{
-    common::store::Field,
+    common::store::{Field, EmptyField},
     database::{
         errors::SyncError, Collection, CollectionAnswer, CollectionStatus, TableReceiver,
         TableStatus,
@@ -10,11 +10,11 @@ use crate::{
 
 use doomstack::Top;
 
-pub struct CollectionReceiver<Item: Field>(pub(crate) TableReceiver<Item, ()>);
+pub struct CollectionReceiver<Item: Field>(pub(crate) TableReceiver<Item, EmptyField>);
 
 impl<Item> CollectionReceiver<Item>
 where
-    Item: Field,
+    Item: Field + Display,
 {
     pub fn learn(
         self,

@@ -10,7 +10,7 @@ use crate::{
 use doomstack::{here, ResultExt, Top};
 
 use oh_snap::Snap;
-use std::{borrow::Borrow, collections::{hash_map::Entry::{Occupied, Vacant}, HashMap}, hash::Hash as StdHash};
+use std::{borrow::Borrow, collections::{hash_map::Entry::{Occupied, Vacant}, HashMap}, hash::Hash as StdHash, fmt::Display};
 
 use talk::crypto::primitives::{hash, hash::Hash};
 
@@ -39,8 +39,8 @@ pub struct Table<Key: Field, Value: Field>(Handle<Key, Value>, String);
 
 impl<Key, Value> Table<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     pub(crate) fn empty(cell: Cell<Key, Value>, name: String) -> Self {
         Table(Handle::empty(cell), name)
@@ -139,8 +139,8 @@ where
         rho: &Table<Key, Value>,
     ) -> HashMap<Key, (Option<Value>, Option<Value>)>
     where
-        Key: Clone + Eq + StdHash,
-        Value: Clone + Eq,
+        Key: Clone + Eq + StdHash + Display,
+        Value: Clone + Eq + Display,
     {
         Handle::diff(&lho.0, & rho.0)
     }

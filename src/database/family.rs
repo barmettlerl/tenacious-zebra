@@ -1,15 +1,17 @@
 
+use std::fmt::Display;
+
 use crate::{
-    common::store::Field,
+    common::store::{Field, EmptyField},
     database::{Collection, CollectionReceiver, Database},
 };
 
 #[derive(Clone)]
-pub struct Family<Item: Field>(pub(crate) Database<Item, ()>);
+pub struct Family<Item: Field>(pub(crate) Database<Item, EmptyField>);
 
 impl<'de, Item> Family<Item>
 where
-    Item: Field,
+    Item: Field + Display,
 {
     pub fn new() -> Self {
         Family(Database::new())

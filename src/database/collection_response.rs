@@ -1,9 +1,9 @@
 use crate::{
-    common::store::Field,
+    common::store::{Field, EmptyField},
     database::{Query, TableResponse},
 };
 
-pub struct CollectionResponse<Item: Field>(pub(crate) TableResponse<Item, ()>);
+pub struct CollectionResponse<Item: Field>(pub(crate) TableResponse<Item, EmptyField>);
 
 impl<Item> CollectionResponse<Item>
 where

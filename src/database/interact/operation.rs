@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     common::{data::Bytes, store::Field, tree::Path},
     database::{interact::Action, store::Wrap},
@@ -62,6 +64,20 @@ where
     Key: Field,
     Value: Field,
 {
+}
+
+impl<Key, Value> Display for Operation<Key, Value>
+where
+    Key: Field + Display,
+    Value: Field + Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.action {
+            Action::Get(_) => write!(f, "Get({})", self.path),
+            Action::Set(key, value) => write!(f, "Set({}, {})", key, value),
+            Action::Remove => write!(f, "Remove({})", self.path),
+        }
+    }
 }
 
 #[cfg(test)]

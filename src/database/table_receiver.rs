@@ -11,10 +11,10 @@ use crate::{
 
 use doomstack::{here, Doom, ResultExt, Top};
 
-use std::collections::{
+use std::{collections::{
     hash_map::Entry::{Occupied, Vacant},
     HashMap, HashSet,
-};
+}, fmt::Display};
 
 const DEFAULT_WINDOW: usize = 128;
 
@@ -39,8 +39,8 @@ struct Context {
 
 impl<Key, Value> TableReceiver<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     pub(crate) fn new(cell: Cell<Key, Value>) -> Self {
         TableReceiver {
@@ -282,8 +282,8 @@ mod tests {
         steps: usize,
     ) -> Transfer<Key, Value>
     where
-        Key: Field,
-        Value: Field,
+        Key: Field + Display,
+        Value: Field + Display,
     {
         for _ in 0..steps {
             let status = receiver.learn(answer).unwrap();
@@ -304,8 +304,8 @@ mod tests {
 
     impl<Key, Value> TableReceiver<Key, Value>
     where
-        Key: Field,
-        Value: Field,
+        Key: Field + Display,
+        Value: Field + Display,
     {
         pub(crate) fn held(&self) -> Vec<Label> {
             self.held.iter().map(|label| *label).collect()
@@ -319,8 +319,8 @@ mod tests {
     ) -> ([Table<Key, Value>; N], usize)
     where
         I: IntoIterator<Item = &'a Table<Key, Value>>,
-        Key: Field,
-        Value: Field,
+        Key: Field + Display,
+        Value: Field + Display,
     {
         let mut transfers: [Transfer<Key, Value>; N] = array_init::from_iter(
             IntoIterator::into_iter(transfers).map(|(sender, receiver)| {

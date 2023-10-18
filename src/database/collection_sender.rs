@@ -1,17 +1,17 @@
-use std::sync::Arc;
+use std::{sync::Arc, fmt::Display};
 
 use crate::{
-    common::store::Field,
+    common::store::{Field, EmptyField},
     database::{errors::SyncError, Collection, CollectionAnswer, Question, TableSender},
 };
 
 use doomstack::Top;
 
-pub struct CollectionSender<Item: Field>(pub(crate) TableSender<Item, ()>);
+pub struct CollectionSender<Item: Field>(pub(crate) TableSender<Item, EmptyField>);
 
 impl<Item> CollectionSender<Item>
 where
-    Item: Field,
+    Item: Field + Display,
 {
     pub fn hello(&self) -> CollectionAnswer<Item> {
         self.0.hello()

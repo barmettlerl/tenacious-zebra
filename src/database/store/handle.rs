@@ -13,7 +13,7 @@ use serde::Deserialize;
 use std::{
     collections::{hash_map::Entry, HashMap},
     hash::Hash as StdHash,
-    ptr, sync::RwLock,
+    ptr, sync::RwLock, fmt::Display,
 };
 
 use talk::crypto::primitives::hash::Hash;
@@ -25,8 +25,8 @@ pub(crate) struct Handle<Key: Field, Value: Field> {
 
 impl<Key, Value> Handle<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     pub fn empty(cell: Cell<Key, Value>) -> Self {
         Handle {
@@ -46,10 +46,8 @@ where
     pub fn apply(&self, batch: Batch<Key, Value>) -> Batch<Key, Value> {
 
         let store = self.cell.take();
-
-
-        let (store, root, batch) = apply::apply(store, self.root.read().unwrap().clone(), batch);
-
+        println!("batch: {}", batch);
+        let (store, root, batch) = apply::apply(store, *self.root.read().unwrap(), batch);
         self.cell.restore(store);
         *self.root.write().unwrap() = root;
 

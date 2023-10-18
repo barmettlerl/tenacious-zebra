@@ -10,14 +10,14 @@ use crate::{
 
 use doomstack::{here, Doom, ResultExt, Top};
 
-use std::collections::hash_map::Entry::{Occupied, Vacant};
+use std::{collections::hash_map::Entry::{Occupied, Vacant}, fmt::Display};
 
 pub struct TableSender<Key: Field, Value: Field>(Handle<Key, Value>);
 
 impl<Key, Value> TableSender<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     pub(crate) fn from_handle(handle: Handle<Key, Value>) -> Self {
         TableSender(handle)

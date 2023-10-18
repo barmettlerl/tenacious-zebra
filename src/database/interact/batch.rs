@@ -4,8 +4,9 @@ use crate::{common::store::Field, database::interact::Operation};
 
 use rayon::prelude::*;
 
-use std::vec::Vec;
+use std::{vec::Vec, fmt::Display};
 
+#[derive(Debug)]
 pub(crate) struct Batch<Key: Field, Value: Field> {
     operations: Snap<Operation<Key, Value>>,
 }
@@ -39,6 +40,19 @@ where
 
     pub fn operations_mut(&mut self) -> &mut [Operation<Key, Value>] {
         &mut self.operations
+    }
+}
+
+impl<Key, Value> Display for Batch<Key, Value>
+where
+    Key: Field + Display,
+    Value: Field + Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for operation in self.operations.iter() {
+            writeln!(f, "{}", operation)?;
+        }
+        Ok(())
     }
 }
 

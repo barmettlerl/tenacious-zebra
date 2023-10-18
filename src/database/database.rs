@@ -1,4 +1,4 @@
-use std::{sync::{RwLock, Arc}, path::Path, io::{Write, Read}};
+use std::{sync::{RwLock, Arc}, path::Path, io::{Write, Read}, fmt::Display};
 use serde::{Serialize, de::DeserializeOwned};
 use bincode;
 use crate::{
@@ -93,8 +93,8 @@ where
 
 impl<Key, Value> Database<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     /// Creates an empty `Database`.
     ///
@@ -166,8 +166,8 @@ where
 
 impl<Key, Value> Default for Database<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     fn default() -> Self {
         Self::new()
@@ -290,7 +290,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use serde::Deserialize;
+    use std::fmt::Display;
 
     use super::*;
 
@@ -298,8 +298,8 @@ mod tests {
 
     impl<Key, Value> Database<Key, Value>
     where
-        Key: Field + Serialize,
-        Value: Field + Serialize,
+        Key: Field + Serialize + Display,
+        Value: Field + Serialize + Display,
     {
         pub(crate) fn table_with_records<I>(&self, records: I) -> Arc<Table<Key, Value>>
         where
@@ -311,7 +311,6 @@ mod tests {
             for (key, value) in records {
                 transaction.set(key, value).unwrap();
             }
-
             table.execute(transaction);
             table
         }
@@ -397,12 +396,16 @@ mod tests {
 
     #[test]
     fn test_if_database_sees_changes_made_on_table() {
+
         let database: Database<u32, u32> = Database::new();
 
         let table = database.table_with_records((0..256).map(|i| (i, i)));
 
         {
             let tables = database.tables.read().unwrap();
+            println!("{:?}", tables[0].root());
+            println!("{:?}", table.root());
+
             assert_eq!(tables[0].root(), table.root())
         }
 

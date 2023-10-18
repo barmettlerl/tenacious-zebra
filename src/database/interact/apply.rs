@@ -1,5 +1,3 @@
-use serde::{Serialize, Deserialize};
-
 use crate::{
     common::{
         store::Field,
@@ -11,7 +9,7 @@ use crate::{
     },
 };
 
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Debug)]
 enum References {
     Applicable(i32),
     NotApplicable,
@@ -136,7 +134,7 @@ where
                 batch,
                 right_chunk,
             );
-
+            
             (store, batch, left_label, right_label)
         }
     };
@@ -292,7 +290,6 @@ where
 {
     let root_node = get(&mut store, root);
     let root_chunk = Chunk::root(&batch);
-
     let (mut store, batch, new_root) = recur(store, root_node, false, 0, batch, root_chunk);
 
     let old_root = root;
@@ -439,11 +436,14 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
+        println!("{}", batch);
         let (mut store, root, _) = apply(store, Label::Empty, batch);
 
         store.check_tree(root);
         store.assert_records(root, (0..128).map(|i| (i, i)));
         store.check_leaks([root]);
+
+        drop (store);
     }
 
     #[test]
@@ -927,4 +927,5 @@ mod tests {
             store.check_leaks([first_root, second_root]);
         }
     }
+
 }

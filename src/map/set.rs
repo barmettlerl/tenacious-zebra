@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use std::{
     borrow::Borrow,
-    fmt::{Debug, Error, Formatter},
+    fmt::{Debug, Error, Formatter, Display},
 };
 
 use talk::crypto::primitives::hash::Hash;

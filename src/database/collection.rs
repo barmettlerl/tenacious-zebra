@@ -1,17 +1,18 @@
 use crate::{
-    common::store::Field,
+    common::store::{Field, EmptyField},
     database::{CollectionResponse, CollectionSender, CollectionTransaction, Table},
 };
 
-use std::{collections::HashSet, hash::Hash as StdHash, sync::Arc};
+use std::{collections::HashSet, hash::Hash as StdHash, sync::Arc, fmt::Display};
 
 use talk::crypto::primitives::hash::Hash;
 
-pub struct Collection<Item: Field>(pub(crate) Arc<Table<Item, ()>>);
+
+pub struct Collection<Item: Field>(pub(crate) Arc<Table<Item, EmptyField>>);
 
 impl<Item> Collection<Item>
 where
-    Item: Field,
+    Item: Field + Display,
 {
     pub fn commit(&self) -> Hash {
         self.0.commit()
@@ -33,7 +34,7 @@ where
         rho: &mut Collection<Item>,
     ) -> (HashSet<Item>, HashSet<Item>)
     where
-        Item: Clone + Eq + StdHash,
+        Item: Clone + Eq + StdHash ,
     {
         let mut lho_minus_rho = HashSet::new();
         let mut rho_minus_lho = HashSet::new();

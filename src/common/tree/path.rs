@@ -1,6 +1,6 @@
 use crate::common::{data::Bytes, tree::Direction};
 
-use std::ops::Index;
+use std::{ops::Index, fmt::Display};
 
 use serde::{Serialize, Deserialize};
 use talk::crypto::primitives::hash::{Hash, HASH_LENGTH};
@@ -109,6 +109,15 @@ impl IntoIterator for Path {
             cursor: 0,
             path: self,
         }
+    }
+}
+
+impl Display for Path {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for direction in self.into_iter() {
+            write!(f, "{}", direction)?;
+        }
+        Ok(())
     }
 }
 

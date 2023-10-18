@@ -5,7 +5,7 @@ use crate::{
 
 use std::ops::Range;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub(crate) struct Chunk {
     prefix: Prefix,
     range: Range<usize>,

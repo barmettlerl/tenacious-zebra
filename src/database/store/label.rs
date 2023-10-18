@@ -5,7 +5,7 @@ use crate::{
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Hash, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Hash, Copy, PartialEq, Eq, Serialize, Deserialize,)]
 pub(crate) enum Label {
     Internal(MapId, Bytes),
     Leaf(MapId, Bytes),

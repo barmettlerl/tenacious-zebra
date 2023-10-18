@@ -36,47 +36,59 @@ impl<Key, Value> Store<Key, Value>
 where
     Key: Field,
     Value: Field,
-{
-    fn merge_reference_counter(_: &[u8], existing_val: Option<&[u8]>, operands: &MergeOperands) -> Option<Vec<u8>>{
-
-            if existing_val.is_none() {
-                return None;
-            }
-
-            let mut existing_val: Entry<Key, Value> = bincode::deserialize::<Entry<Key, Value>>(&existing_val.unwrap()).unwrap();
-
-            let mut operands = operands.into_iter().map(|operand| {
-                let operand: Entry<Key, Value> = bincode::deserialize::<Entry<Key, Value>>(&operand).unwrap();
-                operand
-            });
-
-            for operand in operands {
-                existing_val.references += operand.references;
-            }
-
-            if existing_val.references <= 0 {
-                return None;
-            }
-
-            match bincode::serialize(&existing_val) {
-                Ok(val) => Some(val),
-                Err(e) => panic!("Error while serializing: {}", e),
-            }
-    }
-
-    
+{    
     pub fn new() -> Self {
         let mut opts = Options::default();
         opts.set_merge_operator_associative("merge_reference_counter", Self::merge_reference_counter);
         opts.create_if_missing(true);
         Store {
             maps: Snap::new(
-                (0.. (1 << DEPTH)).map(|id| DB::open_default(format!("{}/{}", PATH, id))).filter(|db| db.is_ok()).map(|db| db.unwrap()).collect(),
+                (0.. (1 << DEPTH)).map(|id| DB::open(&opts, format!("{}/{}", PATH, id), ))
+                .filter_map(|db| db.ok()).collect(),
             ),
             scope: Prefix::root(),
             phantom: std::marker::PhantomData,
         }
     }
+
+    #[cfg(test)]
+    fn get_write_option () -> rocksdb::WriteOptions {
+        let mut write_options = rocksdb::WriteOptions::default();
+        write_options.set_sync(false);
+        write_options
+    }
+
+    #[cfg(not(test))]
+    fn get_write_option() -> rocksdb::WriteOptions {
+        let mut write_options = rocksdb::WriteOptions::default();
+        write_options.set_sync(true);
+        write_options
+    }
+
+    fn merge_reference_counter(_: &[u8], existing_val: Option<&[u8]>, operands: &MergeOperands) -> Option<Vec<u8>>{
+
+        existing_val?;
+
+        let mut existing_val: Entry<Key, Value> = bincode::deserialize::<Entry<Key, Value>>(&existing_val.unwrap()).unwrap();
+
+        let operands = operands.into_iter().map(|operand| {
+            let operand: Entry<Key, Value> = bincode::deserialize::<Entry<Key, Value>>(&operand).unwrap();
+            operand
+        });
+
+        for operand in operands {
+            existing_val.references += operand.references;
+        }
+
+        if existing_val.references <= 0 {
+            return None;
+        }
+
+        match bincode::serialize(&existing_val) {
+            Ok(val) => Some(val),
+            Err(e) => panic!("Error while serializing: {}", e),
+        }
+}
 
     pub fn merge(left: Self, right: Self) -> Self {
         Store {
@@ -114,7 +126,6 @@ where
     pub fn entry(&mut self, label: Label) -> EntryMapEntry<Key, Value> {
         let map = label.map().id() - self.maps.range().start;
         let hash = label.hash();
-        let entry = self.maps[map].get(hash).unwrap();
 
         match self.maps[map].get(hash) {
             Ok(Some(entry)) => {
@@ -168,7 +179,7 @@ where
                         references: 0,
                     };
                     let entry = bincode::serialize(&entry).unwrap();
-                    self.maps[map].put(label.hash(), &entry).unwrap();
+                    self.maps[map].put_opt(label.hash(), &entry, &Self::get_write_option()).unwrap();
                     true
                 }
                 Some(..) => false,
@@ -184,10 +195,10 @@ where
         Value: Field,
     {
         if !label.is_empty() {
-            self.maps[self.get_map_id(label)].merge(label.hash(), bincode::serialize(&Entry {
+            self.maps[self.get_map_id(label)].merge_opt(label.hash(), bincode::serialize(&Entry {
                 node: Node::<Key, Value>::Empty,
                 references: 1,
-            }).unwrap()).unwrap();
+            }).unwrap(), &Self::get_write_option()).unwrap();
         }
     }
 
@@ -212,16 +223,16 @@ where
         // If we are perserve true and the reference count is 0, we want to keep the 
         // entry in the database even though it is not referenced by any other node.
         if preserve && new_reference <= 0 {
-            return match self.maps[self.get_map_id(label)].put(label.hash(), bincode::serialize(&new_entry).unwrap()) {
+            return match self.maps[self.get_map_id(label)].put_opt(label.hash(), bincode::serialize(&new_entry).unwrap(), &Self::get_write_option()) {
                 Ok(..) => Some(new_entry.node),
                 _ => None,
             }
         }
 
-        match self.maps[self.get_map_id(label)].merge(label.hash(), bincode::serialize(&Entry{
+        match self.maps[self.get_map_id(label)].merge_opt(label.hash(), bincode::serialize(&Entry{
             node: Node::<Key, Value>::Empty,
             references: -1,
-        }).unwrap()) {
+        }).unwrap(), &Self::get_write_option()) {
             Ok(..) => Some(new_entry.node),
             _ => None,
         }
@@ -237,7 +248,7 @@ mod tests {
 
     use crate::{
         common::tree::{Direction, Path},
-        database::store::{Entry, Node, Wrap},
+        database::{store::{Node, Wrap}, interact::{Batch, apply}},
     };
 
     use std::{collections::HashSet, fmt::Debug, hash::Hash};
@@ -387,6 +398,7 @@ mod tests {
             collector
         }
 
+
         pub fn check_leaks<I>(&mut self, held: I)
         where
             I: IntoIterator<Item = Label>,
@@ -439,7 +451,7 @@ mod tests {
             for (id, held) in held.into_iter().enumerate() {
                 references
                     .entry(held)
-                    .or_insert(HashSet::new())
+                    .or_default()
                     .insert(Reference::External(id));
 
                 recursion(self, held, &mut references);
@@ -597,4 +609,5 @@ mod tests {
 
     //     assert_eq!(store.size(), 9);
     // }
+
 }

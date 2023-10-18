@@ -1,3 +1,3 @@
-use crate::database::TableAnswer;
+use crate::{database::TableAnswer, common::store::EmptyField};
 
-pub type CollectionAnswer<Item> = TableAnswer<Item, ()>;
+pub type CollectionAnswer<Item> = TableAnswer<Item, EmptyField>;
