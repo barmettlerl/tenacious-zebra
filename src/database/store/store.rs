@@ -59,14 +59,14 @@ where
     #[cfg(test)]
     fn get_write_option () -> rocksdb::WriteOptions {
         let mut write_options = rocksdb::WriteOptions::default();
-        write_options.set_sync(false);
+        write_options.disable_wal(true);
         write_options
     }
 
     #[cfg(not(test))]
     fn get_write_option() -> rocksdb::WriteOptions {
         let mut write_options = rocksdb::WriteOptions::default();
-        write_options.set_sync(true);
+        write_options.disable_wal(false);
         write_options
     }
 
@@ -75,9 +75,8 @@ where
         existing_val?;
 
         let mut existing_val: Entry<Key, Value> = bincode::deserialize::<Entry<Key, Value>>(existing_val.unwrap()).unwrap();
-        println!("existing_val: {}", existing_val);
         let operands = operands.into_iter().map(|operand| {
-            let operand: Entry<Key, Value> = bincode::deserialize::<Entry<Key, Value>>(&operand).unwrap();
+            let operand: Entry<Key, Value> = bincode::deserialize::<Entry<Key, Value>>(operand).unwrap();
             operand
         });
 
@@ -185,7 +184,7 @@ where
                         references: 0,
                     };
                     let entry = bincode::serialize(&entry).unwrap();
-                    self.maps[map].put_opt(label.hash(), &entry, &Self::get_write_option()).unwrap();
+                    self.maps[map].put_opt(label.hash(), entry, &Self::get_write_option()).unwrap();
                     true
                 }
                 Some(..) => false,
