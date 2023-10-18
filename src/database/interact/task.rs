@@ -1,3 +1,5 @@
+use std::fmt::{Display, self, Formatter};
+
 use crate::{common::store::Field, database::interact::Operation};
 
 #[derive(Debug)]
@@ -27,4 +29,18 @@ where
     Key: Field,
     Value: Field,
 {
+}
+
+impl<'a, Key, Value> Display for Task<'a, Key, Value>
+where
+    Key: Field + Display,
+    Value: Field + Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Task::Pass => write!(f, "Pass"),
+            Task::Do(op) => write!(f, "Do({})", op),
+            Task::Split => write!(f, "Split"),
+        }
+    }
 }

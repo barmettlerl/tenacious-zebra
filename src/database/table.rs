@@ -106,7 +106,10 @@ where
     ) -> TableResponse<Key, Value> {
         let (tid, batch) = transaction.finalize();
         let batch = self.0.apply(batch);
-        TableResponse::new(tid, batch)
+        let res = TableResponse::new(tid, batch);
+        println!("{}: {}", self.1, res);
+        println!("hi");
+        res
     }
 
     pub fn export<I, K>(&self, keys: I) -> Result<Map<Key, Value>, Top<QueryError>>

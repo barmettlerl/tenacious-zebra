@@ -41,6 +41,7 @@ where
         let mut opts = Options::default();
         opts.set_merge_operator_associative("merge_reference_counter", Self::merge_reference_counter);
         opts.create_if_missing(true);
+        opts.set_max_open_files(40960);
         println!("Depth: {}", 1 << DEPTH);
         let res = Store {
             maps: Snap::new(
@@ -105,8 +106,6 @@ where
     pub fn split(self) -> Split<Key, Value> {
         if self.scope.depth() < DEPTH {
             let mid = 1 << (DEPTH - self.scope.depth() - 1);
-            println!("failed here");
-            println!("mid: {}", mid);
             let (right_maps, left_maps) = self.maps.snap(mid); // `oh-snap` stores the lowest-index elements in `left`, while `zebra` stores them in `right`, hence the swap
 
             let left = Store {
@@ -443,7 +442,7 @@ mod tests {
                     for child in [left, right] {
                         references
                             .entry(child)
-                            .or_insert(HashSet::new())
+                            .or_default()
                             .insert(Reference::Internal(label));
 
                         recursion(store, child, references);

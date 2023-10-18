@@ -205,6 +205,9 @@ where
     Value: Field + Display,
 {
     println!("recur");
+    println!("target: {}", target.node);
+    println!("depth: {}", batch);
+    println!("chunk.task: {}", chunk.task(&mut batch));
     match (&target.node, chunk.task(&mut batch)) {
         (_, Task::Pass) => (store, batch, target.label),
 
@@ -302,7 +305,6 @@ where
         store.incref(new_root);
         store.decref(old_root, false);
     }
-
     (store, new_root, batch)
 }
 

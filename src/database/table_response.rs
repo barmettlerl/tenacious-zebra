@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter, self};
+
 use crate::{
     common::store::Field,
     database::{
@@ -5,7 +7,7 @@ use crate::{
         Query, Tid,
     },
 };
-
+#[derive(Debug)]
 pub struct TableResponse<Key: Field, Value: Field> {
     tid: Tid,
     batch: Batch<Key, Value>,
@@ -36,5 +38,15 @@ where
             Action::Get(None) => None,
             _ => unreachable!(),
         }
+    }
+}
+
+impl<Key, Value> Display for TableResponse<Key, Value>
+where
+    Key: Field + Display,
+    Value: Field + Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "TableResponse({}, {})", self.tid, self.batch)
     }
 }

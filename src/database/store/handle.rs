@@ -46,7 +46,6 @@ where
     pub fn apply(&self, batch: Batch<Key, Value>) -> Batch<Key, Value> {
 
         let store = self.cell.take();
-        println!("batch: {}", batch);
         let (store, root, batch) = apply::apply(store, *self.root.read().unwrap(), batch);
         self.cell.restore(store);
         *self.root.write().unwrap() = root;
