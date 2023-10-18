@@ -8,7 +8,7 @@ use std::{collections::HashSet, hash::Hash as StdHash, sync::Arc, fmt::Display};
 use talk::crypto::primitives::hash::Hash;
 
 
-pub struct Collection<Item: Field>(pub(crate) Arc<Table<Item, EmptyField>>);
+pub struct Collection<Item: Field + Display>(pub(crate) Arc<Table<Item, EmptyField>>);
 
 impl<Item> Collection<Item>
 where
@@ -53,7 +53,7 @@ where
 
 impl<Item> Clone for Collection<Item>
 where
-    Item: Field,
+    Item: Field + Display,
 {
     fn clone(&self) -> Self {
         Collection(self.0.clone())

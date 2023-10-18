@@ -1,16 +1,14 @@
-use serde::Deserialize;
-
 use crate::{
     common::store::Field,
     database::store::{Label, Node, Split, Store, Wrap},
 };
 
-use std::collections::LinkedList;
+use std::{collections::LinkedList, fmt::Display};
 
 fn get<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Node<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     if !label.is_empty() {
         match store.entry(label) {
@@ -34,8 +32,8 @@ pub(crate) fn branch< Key, Value>(
     LinkedList<(Wrap<Key>, Wrap<Value>)>,
 )
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     let (lho_left, lho_right) = match lho_recursion {
         Some((lho_left, lho_right)) => (Some(lho_left), Some(lho_right)),
@@ -111,8 +109,8 @@ pub(crate) fn recur< Key, Value>(
     LinkedList<(Wrap<Key>, Wrap<Value>)>,
 )
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     if lho_node != rho_node {
         let mut lho_collector = LinkedList::new();
@@ -164,8 +162,8 @@ pub(crate) fn diff< Key, Value>(
     LinkedList<(Wrap<Key>, Wrap<Value>)>,
 )
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     recur(store, Some(lho_root), Some(rho_root))
 }

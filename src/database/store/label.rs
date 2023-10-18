@@ -1,7 +1,10 @@
+use std::fmt::Display;
+
 use crate::{
     common::{data::Bytes, store::hash},
     database::store::MapId,
 };
+
 
 use serde::{Deserialize, Serialize};
 
@@ -32,6 +35,20 @@ impl Label {
             Label::Internal(_, hash) => *hash,
             Label::Leaf(_, hash) => *hash,
             Label::Empty => hash::empty(),
+        }
+    }
+}
+
+impl Display for Label {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Label::Internal(map, hash) => {
+                writeln!(f, "Internal: {} {}", map, hash::hex(hash))
+            }
+            Label::Leaf(map, hash) => {
+                writeln!(f, "Leaf: {} {}", map, hash::hex(hash))
+            }
+            Label::Empty => writeln!(f, "Empty"),
         }
     }
 }

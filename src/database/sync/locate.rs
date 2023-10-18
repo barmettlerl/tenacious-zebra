@@ -6,7 +6,7 @@ use crate::{
     database::store::{Label, Node, Store},
 };
 
-use std::collections::hash_map::Entry::{Occupied, Vacant};
+use std::{collections::hash_map::Entry::{Occupied, Vacant}, fmt::Display};
 
 enum Recursion {
     Recur(Label),
@@ -15,8 +15,8 @@ enum Recursion {
 
 fn get_siblings<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> (u8, (Label, Label))
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     let recursion = match store.entry(label) {
         Some((_, entry)) => match entry.node {
@@ -41,8 +41,8 @@ where
 
 fn leaf_path<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Path
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     match store.entry(label) {
         Some((_, entry)) => match &entry.node {
@@ -55,8 +55,8 @@ where
 
 pub(crate) fn locate<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Prefix
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     let (dive, (left, right)) = get_siblings(store, label);
     let common = Prefix::common(leaf_path(store, left), leaf_path(store, right));

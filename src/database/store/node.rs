@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     common::{
         data::Bytes,
@@ -68,4 +70,19 @@ where
     Key: Field,
     Value: Field,
 {
+}
+
+
+impl<Key, Value> Display for Node<Key, Value>
+where
+    Key: Field + Display,
+    Value: Field + Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Node::Empty => writeln!(f, "Empty"),
+            Node::Internal(left, right) => writeln!(f, "Internal({}, {})", left, right),
+            Node::Leaf(key, value) => writeln!(f, "Leaf({}, {})", key, value),
+        }
+    }
 }

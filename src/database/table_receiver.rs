@@ -18,7 +18,7 @@ use std::{collections::{
 
 const DEFAULT_WINDOW: usize = 128;
 
-pub struct TableReceiver<Key: Field, Value: Field> {
+pub struct TableReceiver<Key: Field + Display, Value: Field + Display> {
     cell: Cell<Key, Value>,
     root: Option<Label>,
     name: String,
@@ -240,8 +240,8 @@ where
 
 impl<Key, Value> Drop for TableReceiver<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     fn drop(&mut self) {
         let mut store = self.cell.take();
@@ -264,8 +264,8 @@ mod tests {
 
     enum Transfer<'a, Key, Value>
     where
-        Key: Field,
-        Value: Field,
+        Key: Field + Display,
+        Value: Field + Display,
     {
         Complete(Table<Key, Value>),
         Incomplete(

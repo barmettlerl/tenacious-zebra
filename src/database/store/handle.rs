@@ -18,7 +18,7 @@ use std::{
 
 use talk::crypto::primitives::hash::Hash;
 
-pub(crate) struct Handle<Key: Field, Value: Field> {
+pub(crate) struct Handle<Key: Field + Display, Value: Field + Display> {
     pub cell: Cell<Key, Value>,
     pub root: RwLock<Label>,
 }
@@ -117,8 +117,8 @@ where
 
 impl<Key, Value> Clone for Handle<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     fn clone(&self) -> Self {
         let mut store = self.cell.take();
@@ -134,8 +134,8 @@ where
 
 impl<Key, Value> Drop for Handle<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     fn drop(&mut self) {
         let mut store = self.cell.take();

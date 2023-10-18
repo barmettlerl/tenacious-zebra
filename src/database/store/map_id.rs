@@ -8,7 +8,7 @@ use crate::{
 
 use serde::{Deserialize, Serialize};
 
-use std::fmt::{Debug, Error, Formatter, LowerHex};
+use std::fmt::{Debug, Error, Formatter, LowerHex, Display};
 
 #[derive(Clone, Copy, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct MapId(u8);
@@ -49,6 +49,13 @@ impl LowerHex for MapId {
 impl Debug for MapId {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         write!(f, "MapId({:x})", self)?;
+        Ok(())
+    }
+}
+
+impl Display for MapId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(f, "{:x}", self)?;
         Ok(())
     }
 }

@@ -7,7 +7,7 @@ use crate::{
 
 use doomstack::Top;
 
-pub struct CollectionSender<Item: Field>(pub(crate) TableSender<Item, EmptyField>);
+pub struct CollectionSender<Item: Field + Display>(pub(crate) TableSender<Item, EmptyField>);
 
 impl<Item> CollectionSender<Item>
 where

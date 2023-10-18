@@ -15,7 +15,7 @@ use std::{
         },
         HashMap,
     },
-    iter,
+    iter, fmt::Display,
 };
 use rocksdb::{DB, Options, MergeOperands};
 
@@ -34,21 +34,26 @@ pub(crate) struct Store<Key: Field, Value: Field>{
 
 impl<Key, Value> Store<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {    
     pub fn new() -> Self {
         let mut opts = Options::default();
         opts.set_merge_operator_associative("merge_reference_counter", Self::merge_reference_counter);
         opts.create_if_missing(true);
-        Store {
+        println!("Depth: {}", 1 << DEPTH);
+        let res = Store {
             maps: Snap::new(
                 (0.. (1 << DEPTH)).map(|id| DB::open(&opts, format!("{}/{}", PATH, id), ))
-                .filter_map(|db| db.ok()).collect(),
+                .map(|db| db.unwrap()).collect(),
             ),
             scope: Prefix::root(),
             phantom: std::marker::PhantomData,
-        }
+        };
+
+        println!("res: {}", res.maps.len());
+
+        res 
     }
 
     #[cfg(test)]
@@ -69,8 +74,8 @@ where
 
         existing_val?;
 
-        let mut existing_val: Entry<Key, Value> = bincode::deserialize::<Entry<Key, Value>>(&existing_val.unwrap()).unwrap();
-
+        let mut existing_val: Entry<Key, Value> = bincode::deserialize::<Entry<Key, Value>>(existing_val.unwrap()).unwrap();
+        println!("existing_val: {}", existing_val);
         let operands = operands.into_iter().map(|operand| {
             let operand: Entry<Key, Value> = bincode::deserialize::<Entry<Key, Value>>(&operand).unwrap();
             operand
@@ -101,7 +106,8 @@ where
     pub fn split(self) -> Split<Key, Value> {
         if self.scope.depth() < DEPTH {
             let mid = 1 << (DEPTH - self.scope.depth() - 1);
-
+            println!("failed here");
+            println!("mid: {}", mid);
             let (right_maps, left_maps) = self.maps.snap(mid); // `oh-snap` stores the lowest-index elements in `left`, while `zebra` stores them in `right`, hence the swap
 
             let left = Store {
@@ -255,8 +261,8 @@ mod tests {
 
     impl<Key, Value> Store<Key, Value>
     where
-        Key: Field,
-        Value: Field,
+        Key: Field + Display,
+        Value: Field + Display,
     {
         pub fn raw_leaves<I>(leaves: I) -> (Self, Vec<Label>)
         where
@@ -351,8 +357,8 @@ mod tests {
         pub fn check_tree(&mut self, root: Label) {
             fn recursion<Key, Value>(store: &mut Store<Key, Value>, label: Label, location: Prefix)
             where
-                Key: Field,
-                Value: Field,
+                Key: Field + Display,
+                Value: Field + Display,
             {
                 match label {
                     Label::Internal(..) => {
@@ -380,8 +386,8 @@ mod tests {
                 label: Label,
                 collector: &mut HashSet<Label>,
             ) where
-                Key: Field,
-                Value: Field,
+                Key: Field + Display,
+                Value: Field + Display,
             {
                 if !label.is_empty() {
                     collector.insert(label);
@@ -429,8 +435,8 @@ mod tests {
                 label: Label,
                 references: &mut HashMap<Label, HashSet<Reference>>,
             ) where
-                Key: Field,
-                Value: Field,
+                Key: Field + Display,
+                Value: Field + Display,
             {
                 if let Label::Internal(..) = label {
                     let (left, right) = store.fetch_internal(label);
@@ -479,8 +485,8 @@ mod tests {
                 label: Label,
                 collector: &mut HashMap<Key, Value>,
             ) where
-                Key: Field + Clone + Eq + Hash,
-                Value: Field + Clone,
+                Key: Field + Clone + Eq + Hash + Display,
+                Value: Field + Clone + Display,
             {
                 match label {
                     Label::Internal(..) => {

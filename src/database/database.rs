@@ -84,8 +84,8 @@ use super::store::Label;
 
 pub struct Database<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     pub(crate) store: Cell<Key, Value>,
     pub(crate) tables: RwLock<Vec<Arc<Table<Key, Value>>>>,
@@ -277,8 +277,8 @@ where
 
 impl<Key, Value> Clone for Database<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     fn clone(&self) -> Self {
         Database {

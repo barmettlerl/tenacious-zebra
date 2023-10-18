@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use std::fmt::Display;
 
 use crate::{
     common::store::Field,
@@ -7,8 +7,8 @@ use crate::{
 
 pub(crate) fn drop< Key, Value>(store: &mut Store<Key, Value>, label: Label)
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     match store.decref(label, false) {
         Some(Node::Internal(left, right)) => {

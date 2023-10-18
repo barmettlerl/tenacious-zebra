@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     common::{
         store::Field,
@@ -46,8 +48,8 @@ where
 
 fn get<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Entry<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     if !label.is_empty() {
         match store.entry(label) {
@@ -77,15 +79,17 @@ fn branch<Key, Value>(
     right: Entry<Key, Value>,
 ) -> (Store<Key, Value>, Batch<Key, Value>, Label)
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
+    println!("branch");
     let preserve_branches = preserve
         || if let Some(original) = original {
             original.references.multiple()
         } else {
             false
         };
+
 
     let (mut store, batch, new_left, new_right) = match store.split() {
         Split::Split(left_store, right_store) => {
@@ -197,9 +201,10 @@ fn recur<Key, Value>(
     chunk: Chunk,
 ) -> (Store<Key, Value>, Batch<Key, Value>, Label)
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
+    println!("recur");
     match (&target.node, chunk.task(&mut batch)) {
         (_, Task::Pass) => (store, batch, target.label),
 
@@ -285,8 +290,8 @@ pub(crate) fn apply<Key, Value>(
     batch: Batch<Key, Value>,
 ) -> (Store<Key, Value>, Label, Batch<Key, Value>)
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     let root_node = get(&mut store, root);
     let root_chunk = Chunk::root(&batch);

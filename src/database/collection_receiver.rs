@@ -10,7 +10,7 @@ use crate::{
 
 use doomstack::Top;
 
-pub struct CollectionReceiver<Item: Field>(pub(crate) TableReceiver<Item, EmptyField>);
+pub struct CollectionReceiver<Item: Field + Display>(pub(crate) TableReceiver<Item, EmptyField>);
 
 impl<Item> CollectionReceiver<Item>
 where

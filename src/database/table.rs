@@ -35,7 +35,7 @@ use super::store::{Store, Node, Wrap};
 /// [`TableSender`]: crate::database::TableSender
 /// [`TableReceiver`]: crate::database::TableReceiver
 
-pub struct Table<Key: Field, Value: Field>(Handle<Key, Value>, String);
+pub struct Table<Key: Field + Display, Value: Field + Display>(Handle<Key, Value>, String);
 
 impl<Key, Value> Table<Key, Value>
 where
@@ -239,8 +239,8 @@ where
 
 impl<Key, Value> Clone for Table<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     fn clone(&self) -> Self {
         Table(self.0.clone(), self.1.clone())
@@ -258,8 +258,8 @@ mod tests {
 
     impl<Key, Value> Table<Key, Value>
     where
-        Key: Field,
-        Value: Field,
+        Key: Field + Display,
+        Value: Field + Display,
     {
         pub(crate) fn root(&self) -> Label {
             self.0.root.read().unwrap().clone()
@@ -267,8 +267,8 @@ mod tests {
 
         pub(crate) fn assert_records<I>(&self, reference: I)
         where
-            Key: Debug + Clone + Eq + Hash,
-            Value: Debug + Clone + Eq + Hash,
+            Key: Debug + Clone + Eq + Hash + Display,
+            Value: Debug + Clone + Eq + Hash + Display,
             I: IntoIterator<Item = (Key, Value)>,
         {
             let mut store = self.0.cell.take();

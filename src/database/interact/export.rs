@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use crate::{
     common::{
         store::Field,
@@ -8,12 +10,11 @@ use crate::{
 };
 
 use oh_snap::Snap;
-use serde::Deserialize;
 
 fn get<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Node<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Display,
+    Value: Field + Display,
 {
     if !label.is_empty() {
         match store.entry(label) {
@@ -42,8 +43,8 @@ fn branch<Key, Value>(
     right: Label,
 ) -> (Store<Key, Value>, MapNode<Key, Value>, MapNode<Key, Value>)
 where
-    Key: Field + Clone,
-    Value: Field + Clone,
+    Key: Field + Clone + Display,
+    Value: Field + Clone + Display,
 {
     let (left_paths, right_paths) = split(paths, depth);
 
@@ -73,8 +74,8 @@ fn recur<Key, Value>(
     paths: Snap<Path>,
 ) -> (Store<Key, Value>, MapNode<Key, Value>)
 where
-    Key: Field + Clone,
-    Value: Field + Clone,
+    Key: Field + Clone + Display,
+    Value: Field + Clone + Display,
 {
     let hash = node.hash();
 
@@ -106,8 +107,8 @@ pub(crate) fn export<Key, Value>(
     paths: Snap<Path>,
 ) -> (Store<Key, Value>, MapNode<Key, Value>)
 where
-    Key: Field + Clone,
-    Value: Field + Clone,
+    Key: Field + Clone + Display,
+    Value: Field + Clone + Display,
 {
     recur(store, root, 0, paths)
 }

@@ -17,3 +17,7 @@ pub(crate) fn internal(left: Bytes, right: Bytes) -> Bytes {
 pub(crate) fn leaf(key: Bytes, value: Bytes) -> Bytes {
     hash::hash(&(LEAF_FLAG, key, value)).unwrap().into()
 }
+
+pub(crate) fn hex(hash: &Bytes) -> String {
+    format!("{:x}", hash)
+}
