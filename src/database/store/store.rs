@@ -3,6 +3,7 @@ use crate::{
     database::store::{Entry, Label, MapId, Node, Split},
 };
 
+use rocksdb::DB;
 use serde::{Serialize, Deserialize};
 
 use oh_snap::Snap;
@@ -15,7 +16,7 @@ use std::{
         },
         HashMap,
     },
-    iter,
+    iter, sync::Arc,
 };
 
 pub(crate) type EntryMap<Key, Value> = HashMap<Bytes, Entry<Key, Value>>;
@@ -23,7 +24,6 @@ pub(crate) type EntryMapEntry<'a, Key, Value> = HashMapEntry<'a, Bytes, Entry<Ke
 
 pub(crate) const DEPTH: u8 = 8;
 
-#[derive(Serialize, Deserialize)]
 pub(crate) struct Store<Key: Field, Value: Field> {
     maps: Snap<EntryMap<Key, Value>>,
     scope: Prefix,
