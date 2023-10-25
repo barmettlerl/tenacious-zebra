@@ -46,7 +46,9 @@ where
 
         let store = self.cell.take();
 
-        store.backup(&batch);
+        if store.backup(&batch).is_err() {
+            panic!("Backup failed");
+        }
 
         let (store, root, batch) = apply::apply(store, self.root.read().unwrap().clone(), batch);
 

@@ -24,7 +24,7 @@ where
     }
 
     pub fn hello(&self) -> TableAnswer<Key, Value> {
-        let root = self.0.root.read().unwrap().clone();
+        let root = *self.0.root.read().unwrap();
         self.answer(&Question(vec![root])).unwrap()
     }
 
@@ -50,6 +50,7 @@ where
         Table::from_handle(self.0, name)
     }
 
+    /// Recursively grab nodes from the store and add them to the collector.
     fn grab(
         store: &mut Store<Key, Value>,
         collector: &mut Vec<Node<Key, Value>>,
@@ -59,12 +60,12 @@ where
         if !label.is_empty() {
             let node = match store.entry(label) {
                 Occupied(entry) => {
-                    let node = entry.get().node.clone();
-                    Ok(node)
+                    Ok(entry.get().node.clone())
                 }
                 Vacant(..) => SyncError::MalformedQuestion.fail().spot(here!()),
             }?;
 
+            // TODO why are don't add leaf nodes to the collector?
             let recur = match node {
                 Node::Internal(left, right) if ttl > 0 => Some((left, right)),
                 _ => None,
@@ -94,7 +95,7 @@ mod tests {
 
     #[test]
     fn answer_empty() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::new("test");
         let table = database.empty_table("test");
 
         let send = table.send();
@@ -106,7 +107,7 @@ mod tests {
 
     #[test]
     fn answer_non_existant() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::new("test");
         let table = database.empty_table("test");
 
         let send = table.send();
@@ -125,7 +126,7 @@ mod tests {
 
     #[test]
     fn grab_one() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::new("test");
         let table = database.table_with_records([(0u32, 0u32)]);
 
         let send = table.send();
@@ -145,7 +146,7 @@ mod tests {
 
     #[test]
     fn grab_three() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::new("test");
         let table = database.table_with_records([(0u32, 0u32), (4u32, 4u32)]);
 
         let send = table.send();

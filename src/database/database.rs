@@ -45,7 +45,7 @@ use talk::sync::lenders::AtomicLender;
 /// fn main() {
 ///     // Type inference lets us omit an explicit type signature (which
 ///     // would be `Database<String, integer>` in this example).
-///     let database = Database::new();
+///     let database = Database::new("test");
 ///
 ///     // We create a new transaction. See [`Transaction`] for more details.
 ///     let mut modify = TableTransaction::new();
@@ -98,11 +98,11 @@ where
     ///
     /// ```
     /// use tenaciouszebra::database::{Database, TableTransaction};
-    /// let mut database: Database<String, i32> = Database::new();
+    /// let mut database: Database<String, i32> = Database::new("test");
     /// ```
-    pub fn new() -> Self {
+    pub fn new(backup_path: &str) -> Self {
         Database {
-            store: Cell::new(AtomicLender::new(Store::new())),
+            store: Cell::new(AtomicLender::new(Store::new(backup_path))),
             tables: RwLock::new(Vec::new()),
         }
     }
@@ -121,7 +121,7 @@ where
     ///
     /// ```
     /// use tenaciouszebra::database::{Database, TableTransaction};
-    /// let mut database: Database<String, i32> = Database::new();
+    /// let mut database: Database<String, i32> = Database::new("test");
     ///
     /// let table = database.empty_table("test");
     /// ```
@@ -141,7 +141,7 @@ where
     ///
     /// ```
     /// use tenaciouszebra::database::{Database, TableTransaction};
-    /// let mut database: Database<String, i32> = Database::new();
+    /// let mut database: Database<String, i32> = Database::new("test");
     ///
     /// let mut receiver = database.receive();
     ///
@@ -159,7 +159,7 @@ where
     Value: Field,
 {
     fn default() -> Self {
-        Self::new()
+        Self::new("backup")
     }
 }
 
@@ -234,7 +234,7 @@ mod tests {
 
     #[test]
     fn test_if_table_is_correct_after_execution_of_operations() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::new("test");
 
         let table = database.table_with_records((0..256).map(|i| (i, i)));
 
@@ -250,7 +250,7 @@ mod tests {
 
     #[test]
     fn test_if_changes_are_seen_when_clone_of_table_is_modified() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::new("test");
 
         let table = database.table_with_records((0..256).map(|i| (i, i)));
         let table_clone = table.clone();
@@ -266,7 +266,7 @@ mod tests {
 
     #[test]
     fn test_if_len_is_correct_when_database_contains_zero_elements() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::new("test");
         let tables = database.tables.read().unwrap();
 
         assert_eq!(tables.len(), 0)
@@ -274,7 +274,7 @@ mod tests {
 
     #[test]
     fn test_if_len_is_correct_when_database_contains_one_element() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::new("test");
 
         database.empty_table("test");
 
@@ -285,7 +285,7 @@ mod tests {
 
     #[test]
     fn test_if_database_sees_changes_made_on_table() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::new("test");
 
         let table = database.table_with_records((0..256).map(|i| (i, i)));
 

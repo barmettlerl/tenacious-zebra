@@ -34,9 +34,9 @@ where
     Key: Field,
     Value: Field,
 {
-    pub fn new() -> Self {
+    pub fn new(backup_folder_path: &str) -> Self {
         Store {
-            db: Arc::new(DB::open_default("wal").unwrap()),
+            db: Arc::new(DB::open_default(backup_folder_path).unwrap()),
             maps: Snap::new(
                 iter::repeat_with(EntryMap::new)
                     .take(1 << DEPTH)
@@ -83,7 +83,6 @@ where
         for operation in batch.operations() {
             match operation.action {
                 Action::Set(ref key, ref value) => {
-                    println!("set");
                     rocks_batch.put(key.digest(), value.digest());
                 }
                 Action::Remove => {
@@ -203,11 +202,11 @@ mod tests {
         Key: Field,
         Value: Field,
     {
-        pub fn raw_leaves<I>(leaves: I) -> (Self, Vec<Label>)
+        pub fn raw_leaves<I>(backup_folder_path: &str,leaves: I) -> (Self, Vec<Label>)
         where
             I: IntoIterator<Item = (Key, Value)>,
         {
-            let mut store = Store::new();
+            let mut store = Store::new(backup_folder_path);
 
             let labels = leaves
                 .into_iter()
@@ -452,6 +451,7 @@ mod tests {
             collector
         }
 
+        /// Asserts that the tree rooted at `root` contains the records in `reference`.
         pub fn assert_records<I>(&mut self, root: Label, reference: I)
         where
             Key: Debug + Clone + Eq + Hash,
@@ -463,8 +463,7 @@ mod tests {
             let reference: HashSet<(Key, Value)> = reference.into_iter().collect();
 
             let differences: HashSet<(Key, Value)> = reference
-                .symmetric_difference(&actual)
-                .map(|r| r.clone())
+                .symmetric_difference(&actual).cloned()
                 .collect();
 
             assert_eq!(differences, HashSet::new());
@@ -473,7 +472,7 @@ mod tests {
 
     #[test]
     fn split() {
-        let (mut store, labels) = Store::raw_leaves([(0u32, 1u32)]);
+        let (mut store, labels) = Store::raw_leaves("test", [(0u32, 1u32)]);
 
         let path = Path::from(wrap!(0u32).digest());
         let label = labels[0];
@@ -516,7 +515,7 @@ mod tests {
     #[test]
     fn merge() {
         let leaves = (0..=8).map(|i| (i, i));
-        let (store, labels) = Store::raw_leaves(leaves);
+        let (store, labels) = Store::raw_leaves("test", leaves);
 
         let (l, r) = match store.split() {
             Split::Split(l, r) => (l, r),
@@ -556,11 +555,11 @@ mod tests {
 
     #[test]
     fn size() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::new("test");
         assert_eq!(store.size(), 0);
 
         let leaves = (0..=8).map(|i| (i, i));
-        let (store, _) = Store::raw_leaves(leaves);
+        let (store, _) = Store::raw_leaves("test2", leaves);
 
         assert_eq!(store.size(), 9);
     }

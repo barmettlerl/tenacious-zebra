@@ -92,3 +92,5 @@ $RECYCLE.BIN/
 lcov.info
 
 wal/
+test/
+test2/
