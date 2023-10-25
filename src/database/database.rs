@@ -1,7 +1,4 @@
 use std::{sync::{RwLock, Arc}, path::Path, io::{Write, Read}};
-use rocksdb::DB;
-use serde::{Serialize, de::DeserializeOwned};
-use bincode;
 use crate::{
     common::{store::Field},
     database::{
@@ -11,8 +8,6 @@ use crate::{
 };
 
 use talk::sync::lenders::AtomicLender;
-
-use super::store::Label;
 
 /// A datastrucure for memory-efficient storage and transfer of maps with a
 /// large degree of similarity (% of key-pairs in common).
@@ -88,7 +83,6 @@ where
     Key: Field,
     Value: Field,
 {
-    pub(crate) wal: DB,
     pub(crate) store: Cell<Key, Value>,
     pub(crate) tables: RwLock<Vec<Arc<Table<Key, Value>>>>,
 }
@@ -108,7 +102,6 @@ where
     /// ```
     pub fn new() -> Self {
         Database {
-            wal: DB::open_default(Path::new("wal")).unwrap(),
             store: Cell::new(AtomicLender::new(Store::new())),
             tables: RwLock::new(Vec::new()),
         }
@@ -177,7 +170,6 @@ where
 {
     fn clone(&self) -> Self {
         Database {
-            wal: DB::open_default(Path::new("wal")).unwrap(),
             store: self.store.clone(),
             tables: RwLock::new(self.tables.read().unwrap().clone()),
         }
@@ -186,7 +178,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use serde::Deserialize;
+    use serde::{Deserialize, Serialize};
 
     use super::*;
 

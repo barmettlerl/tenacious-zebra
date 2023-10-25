@@ -1,10 +1,9 @@
 use crate::{
     common::{data::Bytes, store::Field, tree::Prefix},
-    database::store::{Entry, Label, MapId, Node, Split},
+    database::{store::{Entry, Label, MapId, Node, Split}, interact::{Batch, Action}},
 };
 
-use rocksdb::DB;
-use serde::{Serialize, Deserialize};
+use rocksdb::{DB, WriteBatchWithTransaction, Error};
 
 use oh_snap::Snap;
 
@@ -25,6 +24,7 @@ pub(crate) type EntryMapEntry<'a, Key, Value> = HashMapEntry<'a, Bytes, Entry<Ke
 pub(crate) const DEPTH: u8 = 8;
 
 pub(crate) struct Store<Key: Field, Value: Field> {
+    db: Arc<DB>,
     maps: Snap<EntryMap<Key, Value>>,
     scope: Prefix,
 }
@@ -36,8 +36,9 @@ where
 {
     pub fn new() -> Self {
         Store {
+            db: Arc::new(DB::open_default("wal").unwrap()),
             maps: Snap::new(
-                iter::repeat_with(|| EntryMap::new())
+                iter::repeat_with(EntryMap::new)
                     .take(1 << DEPTH)
                     .collect(),
             ),
@@ -47,6 +48,7 @@ where
 
     pub fn merge(left: Self, right: Self) -> Self {
         Store {
+            db: left.db.clone(),
             maps: Snap::merge(right.maps, left.maps),
             scope: left.scope.ancestor(1),
         }
@@ -59,11 +61,13 @@ where
             let (right_maps, left_maps) = self.maps.snap(mid); // `oh-snap` stores the lowest-index elements in `left`, while `zebra` stores them in `right`, hence the swap
 
             let left = Store {
+                db: self.db.clone(),
                 maps: left_maps,
                 scope: self.scope.left(),
             };
 
             let right = Store {
+                db: self.db.clone(),
                 maps: right_maps,
                 scope: self.scope.right(),
             };
@@ -74,13 +78,28 @@ where
         }
     }
 
+    pub fn backup(&self, batch: &Batch<Key, Value>) ->  Result<(), Error> {
+        let mut rocks_batch = WriteBatchWithTransaction::<false>::default();
+        for operation in batch.operations() {
+            match operation.action {
+                Action::Set(ref key, ref value) => {
+                    println!("set");
+                    rocks_batch.put(key.digest(), value.digest());
+                }
+                Action::Remove => {
+                    println!("remove {:?}", operation.path);
+                }
+                Action::Get(..) => {}
+            }
+        }
+        self.db.write(rocks_batch)
+    }
 
     pub fn entry(&mut self, label: Label) -> EntryMapEntry<Key, Value> {
         let map = label.map().id() - self.maps.range().start;
         let hash = label.hash();
         self.maps[map].entry(hash)
     }
-
 
     #[cfg(test)]
     pub fn size(&self) -> usize {

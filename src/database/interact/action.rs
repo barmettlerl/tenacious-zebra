@@ -3,7 +3,7 @@ use crate::{common::store::Field, database::store::Wrap};
 use std::sync::Arc;
 
 #[derive(Debug)]
-pub(crate) enum Action<Key: Field, Value: Field> {
+pub enum Action<Key: Field, Value: Field> {
     Get(Option<Arc<Value>>),
     Set(Wrap<Key>, Wrap<Value>),
     Remove,

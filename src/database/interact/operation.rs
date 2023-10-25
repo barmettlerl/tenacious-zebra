@@ -8,7 +8,7 @@ use doomstack::Top;
 use talk::crypto::primitives::{hash, hash::HashError};
 
 #[derive(Debug)]
-pub(crate) struct Operation<Key: Field, Value: Field> {
+pub struct Operation<Key: Field, Value: Field> {
     pub path: Path,
     pub action: Action<Key, Value>,
 }

@@ -35,3 +35,9 @@ impl Debug for Bytes {
         Ok(())
     }
 }
+
+impl AsRef<[u8]> for Bytes {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}

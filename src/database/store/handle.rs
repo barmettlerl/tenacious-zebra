@@ -46,6 +46,7 @@ where
 
         let store = self.cell.take();
 
+        store.backup(&batch);
 
         let (store, root, batch) = apply::apply(store, self.root.read().unwrap().clone(), batch);
 
