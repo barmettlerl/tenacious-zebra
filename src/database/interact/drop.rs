@@ -8,12 +8,9 @@ where
     Key: Field,
     Value: Field,
 {
-    match store.decref(label, false) {
-        Some(Node::Internal(left, right)) => {
+    if let Some(Node::Internal(left, right)) = store.decref(label, false) {
             drop(store, left);
             drop(store, right);
-        }
-        _ => (),
     }
 }
 

@@ -50,7 +50,7 @@ where
             panic!("Backup failed");
         }
 
-        let (store, root, batch) = apply::apply(store, self.root.read().unwrap().clone(), batch);
+        let (store, root, batch) = apply::apply(store, *self.root.read().unwrap(), batch);
 
         self.cell.restore(store);
         *self.root.write().unwrap() = root;
@@ -64,7 +64,7 @@ where
         Value: Clone,
     {
         let store = self.cell.take();
-        let (store, root) = export::export(store, self.root.read().unwrap().clone(), paths);
+        let (store, root) = export::export(store, *self.root.read().unwrap(), paths);
         self.cell.restore(store);
 
         root
@@ -84,7 +84,7 @@ where
 
         let store = lho.cell.take();
 
-        let (store, lho_candidates, rho_candidates) = diff::diff(store, lho.root.read().unwrap().clone(), rho.root.read().unwrap().clone());
+        let (store, lho_candidates, rho_candidates) = diff::diff(store, *lho.root.read().unwrap(), *rho.root.read().unwrap());
 
         lho.cell.restore(store);
 
@@ -126,12 +126,12 @@ where
 {
     fn clone(&self) -> Self {
         let mut store = self.cell.take();
-        store.incref(self.root.read().unwrap().clone());
+        store.incref(*self.root.read().unwrap());
         self.cell.restore(store);
 
         Handle {
             cell: self.cell.clone(),
-            root: RwLock::new(self.root.read().unwrap().clone()),
+            root: RwLock::new(*self.root.read().unwrap()),
         }
     }
 }
@@ -143,7 +143,7 @@ where
 {
     fn drop(&mut self) {
         let mut store = self.cell.take();
-        drop::drop(&mut store, self.root.read().unwrap().clone());
+        drop::drop(&mut store, *self.root.read().unwrap());
         self.cell.restore(store);
     }
 }

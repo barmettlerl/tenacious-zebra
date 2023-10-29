@@ -142,10 +142,15 @@ where
     };
 
     let (new_label, adopt) = match (new_left, new_right) {
+        // if both nodes are deleted
         (Label::Empty, Label::Empty) => (Label::Empty, false),
+
+        // if one node is deleted
         (Label::Empty, Label::Leaf(map, hash)) | (Label::Leaf(map, hash), Label::Empty) => {
             (Label::Leaf(map, hash), false)
         }
+        
+        // if we have an insert than both left and right are non-empty nodes
         (new_left, new_right) => {
             let node = Node::<Key, Value>::Internal(new_left, new_right);
             let label = store.label(&node);
@@ -161,6 +166,8 @@ where
         Some(original) => new_label != original.label,
         _ => true,
     } {
+        // adopt is true if a new internal node was inserted. In this case, the
+        // children of the new internal node need to be `incref`-ed 
         if adopt {
             // If `adopt`, then `node` is guaranteed to be
             // `Internal(new_left, new_right)` (see above)
