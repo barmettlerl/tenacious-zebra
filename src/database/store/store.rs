@@ -2,7 +2,7 @@ use crate::{
     common::{data::Bytes, store::Field, tree::Prefix},
     database::{
         interact::{Action, Batch},
-        store::{Entry, Label, MapId, Node, Split, Wrap},
+        store::{Entry, Label, MapId, Node, Split},
         Table, TableTransaction,
     },
 };
@@ -10,7 +10,6 @@ use crate::{
 use rocksdb::{Error, WriteBatchWithTransaction, DB};
 
 use oh_snap::Snap;
-use serde::de::DeserializeOwned;
 
 use std::{
     collections::{

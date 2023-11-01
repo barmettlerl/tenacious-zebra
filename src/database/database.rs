@@ -9,8 +9,6 @@ use crate::{
 
 use talk::sync::lenders::AtomicLender;
 
-use super::{store::Label, table_transaction};
-
 /// A datastrucure for memory-efficient storage and transfer of maps with a
 /// large degree of similarity (% of key-pairs in common).
 ///

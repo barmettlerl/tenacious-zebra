@@ -9,8 +9,8 @@ use talk::crypto::primitives::{hash, hash::HashError};
 
 #[derive(Debug)]
 pub struct Operation<Key: Field, Value: Field> {
-    pub path: Path,
-    pub action: Action<Key, Value>,
+    pub(crate) path: Path,
+    pub(crate) action: Action<Key, Value>,
 }
 
 impl<Key, Value> Operation<Key, Value>
