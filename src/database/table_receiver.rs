@@ -311,15 +311,15 @@ mod tests {
         }
     }
 
-    fn run<'de, 'a, Key, Value, I, const N: usize>(
+    fn run<'a, Key, Value, I, const N: usize>(
         database: &Database<Key, Value>,
         tables: I,
         transfers: [(&mut TableSender<Key, Value>, TableReceiver<Key, Value>); N],
     ) -> ([Table<Key, Value>; N], usize)
     where
         I: IntoIterator<Item = &'a Table<Key, Value>>,
-        Key: Field + Serialize + Deserialize<'de>,
-        Value: Field + Serialize + Deserialize<'de>,
+        Key: Field + Serialize,
+        Value: Field + Serialize,
     {
         let mut transfers: [Transfer<Key, Value>; N] = array_init::from_iter(
             IntoIterator::into_iter(transfers).map(|(sender, receiver)| {

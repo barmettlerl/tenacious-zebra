@@ -105,7 +105,7 @@ where
         transaction: TableTransaction<Key, Value>,
     ) -> TableResponse<Key, Value> {
         let (tid, batch) = transaction.finalize();
-        let batch = self.0.apply(batch);
+        let batch = self.0.apply(self.get_name(), batch);
         TableResponse::new(tid, batch)
     }
 

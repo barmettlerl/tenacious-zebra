@@ -1,4 +1,4 @@
-use std::{sync::{RwLock, Arc}, path::Path, io::{Write, Read}};
+use std::{sync::{RwLock, Arc}, path::Path, io::{Write, Read}, collections::HashMap};
 use crate::{
     common::{store::Field},
     database::{
@@ -8,6 +8,8 @@ use crate::{
 };
 
 use talk::sync::lenders::AtomicLender;
+
+use super::{store::Label, table_transaction};
 
 /// A datastrucure for memory-efficient storage and transfer of maps with a
 /// large degree of similarity (% of key-pairs in common).
@@ -85,6 +87,7 @@ where
 {
     pub(crate) store: Cell<Key, Value>,
     pub(crate) tables: RwLock<Vec<Arc<Table<Key, Value>>>>,
+    backup_path: String,
 }
 
 impl<Key, Value> Database<Key, Value>
@@ -101,14 +104,57 @@ where
     /// let mut database: Database<String, i32> = Database::new("test");
     /// ```
     pub fn new(backup_path: &str) -> Self {
-        Database {
-            store: Cell::new(AtomicLender::new(Store::new(backup_path))),
-            tables: RwLock::new(Vec::new()),
+        let store = Cell::new(AtomicLender::new(Store::new(backup_path)));
+        std::fs::create_dir_all(backup_path).unwrap();
+        //check if file exists and if not create it
+        if !Path::new(backup_path).join("tables").exists() {
+            let _ = std::fs::File::create(Path::new(backup_path).join("tables")).unwrap();
         }
+        let mut file = std::fs::File::open(Path::new(backup_path).join("tables")).unwrap();
+
+        let mut serialized = Vec::new();
+        file.read_to_end(&mut serialized).unwrap();
+
+        // check if serialized is empty
+        if serialized.len() != 0 {
+            let tables = bincode::deserialize::<Vec<String>>(&serialized).unwrap()
+            .iter().map(|f|(f.to_string(), Arc::new(Table::empty(store.clone(), f.to_string())))).collect::<HashMap<String, Arc<Table<Key, Value>>>>();
+            
+            let (new_store, table_transactions) = store.take().restore_backup(&tables);
+            store.restore(new_store);
+            for (_, (table, transaction)) in table_transactions {
+                table.execute(transaction);
+            }
+
+            Database {
+                store,
+                tables: RwLock::new(tables.iter().map(|(_, table)| table.clone()).collect()),
+                backup_path: backup_path.to_string(),
+            }
+        } else {
+            Database {
+                store,
+                tables: RwLock::new(Vec::new()),
+                backup_path: backup_path.to_string(),
+            }
+        }
+
     }
 
+    /// Adds a [`Table`] to the `Database` and store it on the disk.
     pub(crate) fn add_table(&self, table: Arc<Table<Key, Value>>) {
         self.tables.write().unwrap().push(table);
+
+        let mut file = std::fs::File::create(Path::new(&self.backup_path).join("tables")).unwrap();
+
+        let tables = self.tables.read()
+        .unwrap()
+        .iter()
+        .map(|f|f.get_name())
+        .collect::<Vec<String>>();
+
+        let serialized = bincode::serialize(&tables).unwrap();
+        file.write_all(&serialized).unwrap();
     }
 
     pub fn get_table(&self, name: &str) -> Option<Arc<Table<Key, Value>>> {
@@ -127,7 +173,7 @@ where
     /// ```
     pub fn empty_table(&self, name: &str) -> Arc<Table<Key, Value>> {
         let table = Arc::new(Table::empty(self.store.clone(), name.to_string()));
-        self.tables.write().unwrap().push(table.clone());
+        self.add_table(table.clone());
         table
     }
 
@@ -172,6 +218,7 @@ where
         Database {
             store: self.store.clone(),
             tables: RwLock::new(self.tables.read().unwrap().clone()),
+            backup_path: self.backup_path.clone(),
         }
     }
 }
@@ -184,10 +231,10 @@ mod tests {
 
     use crate::database::{store::Label, TableTransaction};
 
-    impl<'de, Key, Value> Database<Key, Value>
+    impl<Key, Value> Database<Key, Value>
     where
-        Key: Field + Serialize + Deserialize<'de>,
-        Value: Field + Serialize + Deserialize<'de>,
+        Key: Field + Serialize,
+        Value: Field + Serialize,
     {
         pub(crate) fn table_with_records<I>(&self, records: I) -> Arc<Table<Key, Value>>
         where
@@ -208,8 +255,8 @@ mod tests {
         where
             I: IntoIterator<Item = &'a Table<Key, Value>>,
             J: IntoIterator<Item = &'a TableReceiver<Key, Value>>,
-            Key: Field + Deserialize<'de>,
-            Value: Field + Deserialize<'de>,
+            Key: Field,
+            Value: Field,
         {
             let tables: Vec<&'a Table<Key, Value>> = tables.into_iter().collect();
 

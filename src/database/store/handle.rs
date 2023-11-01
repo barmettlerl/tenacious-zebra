@@ -42,11 +42,11 @@ where
         self.root.read().unwrap().hash().into()
     }
 
-    pub fn apply(&self, batch: Batch<Key, Value>) -> Batch<Key, Value> {
+    pub fn apply(&self, table_name: String, batch: Batch<Key, Value>) -> Batch<Key, Value> {
 
         let store = self.cell.take();
 
-        if store.backup(&batch).is_err() {
+        if store.backup(&batch, table_name).is_err() {
             panic!("Backup failed");
         }
 

@@ -11,7 +11,9 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 #[derive(Clone, Serialize, Deserialize)]
 pub(crate) enum Node<Key: Field, Value: Field> {
     Empty,
+    #[serde(bound(deserialize = ""))]
     Internal(Internal<Key, Value>),
+    #[serde(bound(deserialize = ""))]
     Leaf(Leaf<Key, Value>),
     Stub(Stub),
 }
@@ -24,7 +26,9 @@ pub(crate) struct Internal<Key: Field, Value: Field> {
 
 #[derive(Clone, Serialize, Deserialize)]
 struct Children<Key: Field, Value: Field> {
+    #[serde(bound(deserialize = ""))]
     left: Box<Node<Key, Value>>,
+    #[serde(bound(deserialize = ""))]
     right: Box<Node<Key, Value>>,
 }
 
@@ -36,7 +40,9 @@ pub(crate) struct Leaf<Key: Field, Value: Field> {
 
 #[derive(Clone, Serialize, Deserialize)]
 struct Fields<Key: Field, Value: Field> {
+    #[serde(bound(deserialize = ""))]
     key: Wrap<Key>,
+    #[serde(bound(deserialize = ""))]
     value: Wrap<Value>,
 }
 
@@ -215,8 +221,8 @@ where
 
 impl<'de, Key, Value> Deserialize<'de> for Internal<Key, Value>
 where
-    Key: Field + Deserialize<'de>,
-    Value: Field + Deserialize<'de>,
+    Key: Field,
+    Value: Field,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -242,8 +248,8 @@ where
 
 impl<'de, Key, Value> Deserialize<'de> for Leaf<Key, Value>
 where
-    Key: Field + Deserialize<'de>,
-    Value: Field + Deserialize<'de>,
+    Key: Field,
+    Value: Field,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
