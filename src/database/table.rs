@@ -279,6 +279,17 @@ mod tests {
             self.0.cell.restore(store);
         }
 
+        pub fn collect_records(&self) -> HashMap<Key, Value>
+        where
+            Key: Clone + Eq + Hash,
+            Value: Clone + Eq + Hash,
+        {
+            let mut store = self.0.cell.take();
+            let records = store.collect_records(*self.0.root.read().unwrap());
+            self.0.cell.restore(store);
+            records
+        }
+
     }
 
     #[test]
