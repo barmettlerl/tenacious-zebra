@@ -19,6 +19,7 @@ pub(crate) type Tid = usize;
 
 static TID: AtomicUsize = AtomicUsize::new(0);
 
+#[derive(Debug)]
 pub struct TableTransaction<Key: Field, Value: Field> {
     tid: Tid,
     operations: Vec<Operation<Key, Value>>,
