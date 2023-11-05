@@ -10,6 +10,7 @@ use crate::{
 
 use super::interact::Operation;
 
+#[derive(Debug)]
 pub struct TableResponse<Key: Field, Value: Field> {
     tid: Tid,
     batch: Batch<Key, Value>,
