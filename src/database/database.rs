@@ -114,36 +114,41 @@ where
         file.read_to_end(&mut serialized).unwrap();
 
         // check if serialized is empty
-        if serialized.len() != 0 {
+        if !serialized.is_empty() {
             let tables = bincode::deserialize::<Vec<String>>(&serialized).unwrap()
             .iter().map(|f|(f.to_string(), Arc::new(Table::empty(store.clone(), f.to_string())))).collect::<HashMap<String, Arc<Table<Key, Value>>>>();
             
             let (new_store, table_transactions) = store.take().restore_backup(&tables);
             store.restore(new_store);
+
             for (_, (table, transaction)) in table_transactions {
                 table.execute(transaction);
             }
 
             Database {
-                store,
-                tables: RwLock::new(tables.iter().map(|(_, table)| table.clone()).collect()),
+                store: store.clone(),
+                tables: RwLock::new(tables.values().cloned().collect()),
                 backup_path: backup_path.to_string(),
             }
         } else {
             Database {
-                store,
+                store: store.clone(),
                 tables: RwLock::new(Vec::new()),
                 backup_path: backup_path.to_string(),
             }
         }
 
+
     }
 
     /// Adds a [`Table`] to the `Database` and store it on the disk.
     pub(crate) fn add_table(&self, table: Arc<Table<Key, Value>>) {
-        self.tables.write().unwrap().push(table);
+        let table_exists = self.tables.read().unwrap().iter().any(|f|f.get_name() == table.get_name());
+        if table_exists {
+            return;
+        }
 
-        let mut file = std::fs::File::create(Path::new(&self.backup_path).join("tables")).unwrap();
+        self.tables.write().unwrap().push(table);
 
         let tables = self.tables.read()
         .unwrap()
@@ -152,6 +157,7 @@ where
         .collect::<Vec<String>>();
 
         let serialized = bincode::serialize(&tables).unwrap();
+        let mut file: std::fs::File = std::fs::File::create(Path::new(&self.backup_path).join("tables")).unwrap();
         file.write_all(&serialized).unwrap();
     }
 
@@ -223,7 +229,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use serde::{Deserialize, Serialize};
+    use serde::Serialize;
 
     use super::*;
 
@@ -349,6 +355,43 @@ mod tests {
         {
             let tables = database.tables.read().unwrap();
             assert_eq!(tables[0].root(), table.root())
+        }
+
+    }
+
+    #[test]
+    fn test_if_same_key_values_stored_in_multiple_table_are_restored_correctly() {
+        {
+            let database1: Database<u32, u32> = Database::new("test/wal");
+
+            let table1 = database1.empty_table("test1");
+            let table2 = database1.empty_table("test2");
+    
+            let mut transaction = TableTransaction::new();
+            for i in 0..256 {
+                transaction.set(i, i + 1).unwrap();
+            }
+    
+            table1.execute(transaction);
+    
+            let mut transaction = TableTransaction::new();
+    
+            for i in 0..128 {
+                transaction.set(i, i + 1).unwrap();
+            }
+    
+            table2.execute(transaction);
+        }
+        
+        {
+            let database2: Database<u32, u32> = Database::new("test/wal");
+    
+            let table1 = database2.get_table("test1").unwrap();
+    
+            let table2 = database2.get_table("test2").unwrap();
+                    
+            table1.assert_records((0..256).map(|i| (i, i + 1)));
+            table2.assert_records((0..128).map(|i| (i, i + 1)));
         }
 
     }

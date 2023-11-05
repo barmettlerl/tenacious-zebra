@@ -57,10 +57,9 @@ where
 
         iter.seek_to_first();
         while iter.valid() {
-            let key = bincode::deserialize::<Key>(iter.key().unwrap()).unwrap();
-            let (table_name, value) =
-                bincode::deserialize::<(String, Value)>(iter.value().unwrap()).unwrap();
-
+            let (table_name, key) = bincode::deserialize::<(String, Key)>(iter.key().unwrap()).unwrap();
+            let value =
+                bincode::deserialize::<Value>(iter.value().unwrap()).unwrap();
             let _ = table_transactions
                 .get_mut(&table_name)
                 .unwrap()
@@ -110,8 +109,8 @@ where
             match operation.action {
                 Action::Set(ref key, ref value) => {
                     rocks_batch.put(
-                        bincode::serialize(key.inner()).unwrap(),
-                        bincode::serialize(&(&table_name, value.inner())).unwrap(),
+                        bincode::serialize(&(&table_name, key.inner())).unwrap(),
+                        bincode::serialize(&value.inner()).unwrap(),
                     );
                 }
                 Action::Remove => {
