@@ -384,7 +384,6 @@ mod tests {
         let bob: Database<u32, u32> = Database::new("test2");
 
         let original = alice.empty_table("test");
-        println!("hello world");
         let mut sender = original.send();
 
         let receiver = bob.receive();
