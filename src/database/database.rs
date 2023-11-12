@@ -281,22 +281,22 @@ mod tests {
             store.check_references(held.clone());
             self.store.restore(store);
         }
-    }
 
-    pub(crate) fn test_database<Key, Value>(test_function: fn(Database<Key, Value>) -> ()) 
-    where 
-        Key: Field,
-        Value: Field,
-    {
-        let path = format!("test/{}", rand::random::<u64>());
-        let database: Database<Key, Value> = Database::new(&path);
-        test_function(database);
-        std::fs::remove_dir_all(path).unwrap();
+        pub(crate) fn test_database(test_function: fn(Database<Key, Value>) -> ()) 
+        where 
+            Key: Field,
+            Value: Field,
+        {
+            let path = format!("test/{}", rand::random::<u64>());
+            let database: Database<Key, Value> = Database::new(&path);
+            test_function(database);
+            std::fs::remove_dir_all(path).unwrap();
+        }
     }
 
     #[test]
     fn test_if_table_is_correct_after_execution_of_operations() {
-        test_database(|database| {
+        Database::test_database(|database| {
             let table = database.table_with_records((0..4).map(|i| (i, i)));
 
             let mut transaction = TableTransaction::new();
@@ -311,7 +311,7 @@ mod tests {
 
     #[test]
     fn test_if_changes_are_seen_when_clone_of_table_is_modified() {
-        test_database(|database| {
+        Database::test_database(|database| {
             let table = database.table_with_records((0..256).map(|i| (i, i)));
             let table_clone = table.clone();
     
@@ -327,7 +327,7 @@ mod tests {
 
     #[test]
     fn test_if_len_is_correct_when_database_contains_zero_elements() {
-        test_database::<u32, u32>(|database| {
+        Database::<u32, u32>::test_database(|database| {
             let tables = database.tables.read().unwrap();
             assert_eq!(tables.len(), 0)
         });
@@ -335,7 +335,7 @@ mod tests {
 
     #[test]
     fn test_if_len_is_correct_when_database_contains_one_element() {
-        test_database(|database: Database<u32, u32>| {
+        Database::test_database(|database: Database<u32, u32>| {
             database.empty_table("test");
             let tables = database.tables.read().unwrap();
 
@@ -345,7 +345,7 @@ mod tests {
 
     #[test]
     fn test_if_database_sees_changes_made_on_table() {
-        test_database(|database| {
+        Database::test_database(|database| {
             let table = database.table_with_records((0..256).map(|i| (i, i)));
 
             {
