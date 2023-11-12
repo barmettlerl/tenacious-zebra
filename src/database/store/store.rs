@@ -114,6 +114,7 @@ where
                     );
                 }
                 Action::Remove => {
+                    // TODO: implement
                     println!("remove {:?}", operation.path);
                 }
                 Action::Get(..) => {}
@@ -436,7 +437,7 @@ mod tests {
                     for child in [left, right] {
                         references
                             .entry(child)
-                            .or_insert(HashSet::new())
+                            .or_default()
                             .insert(Reference::Internal(label));
 
                         recursion(store, child, references);
@@ -449,7 +450,7 @@ mod tests {
             for (id, held) in held.into_iter().enumerate() {
                 references
                     .entry(held)
-                    .or_insert(HashSet::new())
+                    .or_default()
                     .insert(Reference::External(id));
 
                 recursion(self, held, &mut references);

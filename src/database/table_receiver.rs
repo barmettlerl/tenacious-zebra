@@ -1049,8 +1049,6 @@ mod tests {
             answer.0[0] = Node::Internal(r, l);
         };
 
-        println!("{:?}", answer);
-
         match receiver.learn(answer) {
             Err(e) if *e.top() == SyncError::MalformedAnswer => {
             },

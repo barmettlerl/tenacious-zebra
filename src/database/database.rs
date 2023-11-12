@@ -233,7 +233,7 @@ mod tests {
 
     use super::*;
 
-    use crate::database::{store::Label, TableTransaction};
+    use crate::{database::{store::Label, TableTransaction}, common::data};
 
     impl<Key, Value> Database<Key, Value>
     where
@@ -283,86 +283,96 @@ mod tests {
         }
     }
 
+    pub(crate) fn test_database<Key, Value>(test_function: fn(Database<Key, Value>) -> ()) 
+    where 
+        Key: Field,
+        Value: Field,
+    {
+        let path = format!("test/{}", rand::random::<u64>());
+        let database: Database<Key, Value> = Database::new(&path);
+        test_function(database);
+        std::fs::remove_dir_all(path).unwrap();
+    }
+
     #[test]
     fn test_if_table_is_correct_after_execution_of_operations() {
-        let database: Database<u32, u32> = Database::new("test");
+        test_database(|database| {
+            let table = database.table_with_records((0..4).map(|i| (i, i)));
 
-        let table = database.table_with_records((0..256).map(|i| (i, i)));
-
-        let mut transaction = TableTransaction::new();
-        for i in 128..256 {
-            transaction.set(i, i + 1).unwrap();
-        }
-        let _ = table.execute(transaction);
-        table.assert_records((0..256).map(|i| (i, if i < 128 { i } else { i + 1 })));
-
-        database.check_correctness([table.as_ref()], []);
+            let mut transaction = TableTransaction::new();
+            for i in 2..4 {
+                transaction.set(i, i + 1).unwrap();
+            }
+            let _ = table.execute(transaction);
+            table.assert_records((0..4).map(|i| (i, if i < 2 { i } else { i + 1 })));    
+            database.check_correctness([table.as_ref()], []);
+        });
     }
 
     #[test]
     fn test_if_changes_are_seen_when_clone_of_table_is_modified() {
-        let database: Database<u32, u32> = Database::new("test");
-
-        let table = database.table_with_records((0..256).map(|i| (i, i)));
-        let table_clone = table.clone();
-
-        let mut transaction = TableTransaction::new();
-        for i in 128..256 {
-            transaction.set(i, i + 1).unwrap();
-        }
-        let _response = table.execute(transaction);
-        table_clone.assert_records((0..256).map(|i| (i, if i < 128 { i } else { i + 1 })));
-        table.assert_records((0..256).map(|i| (i, if i < 128 { i } else { i + 1 })));
+        test_database(|database| {
+            let table = database.table_with_records((0..256).map(|i| (i, i)));
+            let table_clone = table.clone();
+    
+            let mut transaction = TableTransaction::new();
+            for i in 128..256 {
+                transaction.set(i, i + 1).unwrap();
+            }
+            let _response = table.execute(transaction);
+            table_clone.assert_records((0..256).map(|i| (i, if i < 128 { i } else { i + 1 })));
+            table.assert_records((0..256).map(|i| (i, if i < 128 { i } else { i + 1 })));
+        });
     }
 
     #[test]
     fn test_if_len_is_correct_when_database_contains_zero_elements() {
-        let database: Database<u32, u32> = Database::new("test");
-        let tables = database.tables.read().unwrap();
-
-        assert_eq!(tables.len(), 0)
+        test_database::<u32, u32>(|database| {
+            let tables = database.tables.read().unwrap();
+            assert_eq!(tables.len(), 0)
+        });
     }
 
     #[test]
     fn test_if_len_is_correct_when_database_contains_one_element() {
-        let database: Database<u32, u32> = Database::new("test");
+        test_database(|database: Database<u32, u32>| {
+            database.empty_table("test");
+            let tables = database.tables.read().unwrap();
 
-        database.empty_table("test");
-
-        let tables = database.tables.read().unwrap();
-
-        assert_eq!(tables.len(), 1)
+            assert_eq!(tables.len(), 1)
+        });
     }
 
     #[test]
     fn test_if_database_sees_changes_made_on_table() {
-        let database: Database<u32, u32> = Database::new("test");
+        test_database(|database| {
+            let table = database.table_with_records((0..256).map(|i| (i, i)));
 
-        let table = database.table_with_records((0..256).map(|i| (i, i)));
-
-        {
-            let tables = database.tables.read().unwrap();
-            assert_eq!(tables[0].root(), table.root())
-        }
-
-        let mut transaction = TableTransaction::new();
-        for i in 128..256 {
-            transaction.set(i, i + 1).unwrap();
-        }
-
-        table.execute(transaction);
-
-        {
-            let tables = database.tables.read().unwrap();
-            assert_eq!(tables[0].root(), table.root())
-        }
-
+            {
+                let tables = database.tables.read().unwrap();
+                assert_eq!(tables[0].root(), table.root())
+            }
+    
+            let mut transaction = TableTransaction::new();
+            for i in 128..256 {
+                transaction.set(i, i + 1).unwrap();
+            }
+    
+            table.execute(transaction);
+    
+            {
+                let tables = database.tables.read().unwrap();
+                assert_eq!(tables[0].root(), table.root())
+            }
+        })
     }
 
     #[test]
     fn test_if_same_key_values_stored_in_multiple_table_are_restored_correctly() {
+        let path: String = format!("test/{}", rand::random::<u64>());
+
         {
-            let database1: Database<u32, u32> = Database::new("test/wal");
+            let database1: Database<u32, u32> = Database::new(&path);
 
             let table1 = database1.empty_table("test1");
             let table2 = database1.empty_table("test2");
@@ -384,7 +394,7 @@ mod tests {
         }
         
         {
-            let database2: Database<u32, u32> = Database::new("test/wal");
+            let database2: Database<u32, u32> = Database::new(&path);
     
             let table1 = database2.get_table("test1").unwrap();
     
@@ -393,6 +403,9 @@ mod tests {
             table1.assert_records((0..256).map(|i| (i, i + 1)));
             table2.assert_records((0..128).map(|i| (i, i + 1)));
         }
+
+        // delete 
+        std::fs::remove_dir_all(path).unwrap();
 
     }
 }

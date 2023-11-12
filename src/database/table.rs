@@ -361,7 +361,6 @@ mod tests {
         table.execute(transaction);
 
         let map = table.export(0..512).unwrap();
-        println!("{:?}", map);
 
         map.check_tree();
         map.assert_records((0..512).map(|i| (i, i)));
