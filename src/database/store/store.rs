@@ -602,7 +602,7 @@ mod tests {
     }
 
     #[test]
-    fn size() {
+    fn test_if_size_of_store_entries_is_correct() {
         let store = Store::<u32, u32>::new("test");
         assert_eq!(store.size(), 0);
 

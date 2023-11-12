@@ -408,4 +408,40 @@ mod tests {
         std::fs::remove_dir_all(path).unwrap();
 
     }
+
+    #[test]
+    fn test_if_database_keys_are_not_visible_after_they_are_deleted() {
+        let path: String = format!("test/{}", rand::random::<u64>());
+
+        {
+            let database1: Database<u32, u32> = Database::new(&path);
+
+            let table1 = database1.empty_table("test1");
+    
+            let mut transaction = TableTransaction::new();
+            for i in 0..4 {
+                transaction.set(i, i + 1).unwrap();
+            }
+    
+            table1.execute(transaction);
+
+            let mut transaction = TableTransaction::new();
+            transaction.remove(&0).unwrap();
+            transaction.remove(&1).unwrap();
+
+            table1.execute(transaction);
+        }
+        
+        {
+            let database2: Database<u32, u32> = Database::new(&path);
+    
+            let table1 = database2.get_table("test1").unwrap();
+    
+            assert_eq!(table1.collect_records().len(), 2);  
+        }
+
+        // delete 
+        std::fs::remove_dir_all(path).unwrap();
+
+    }
 }
