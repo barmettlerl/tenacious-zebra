@@ -15,7 +15,7 @@ mod tests {
 
     macro_rules! get {
         ($key: expr) => {
-            crate::database::interact::Operation::get(&$key).unwrap()
+            crate::database::interact::Operation::get($key).unwrap()
         };
     }
 
@@ -27,7 +27,7 @@ mod tests {
 
     macro_rules! remove {
         ($key: expr) => {
-            crate::database::interact::Operation::remove(&$key).unwrap()
+            crate::database::interact::Operation::remove($key).unwrap()
         };
     }
 }

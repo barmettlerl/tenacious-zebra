@@ -18,8 +18,8 @@ where
     Key: Field,
     Value: Field,
 {
-    pub fn get(key: &Key) -> Result<Self, Top<HashError>> {
-        let hash: Bytes = hash::hash(key)?.into();
+    pub fn get(key: Key) -> Result<Self, Top<HashError>> {
+        let hash: Bytes = hash::hash(&key)?.into();
 
         Ok(Operation {
             path: Path::from(hash),
@@ -37,12 +37,12 @@ where
         })
     }
 
-    pub fn remove(key: &Key) -> Result<Self, Top<HashError>> {
-        let hash: Bytes = hash::hash(key)?.into();
+    pub fn remove(key: Key) -> Result<Self, Top<HashError>> {
+        let hash: Bytes = hash::hash(&key)?.into();
 
         Ok(Operation {
             path: Path::from(hash),
-            action: Action::Remove,
+            action: Action::Remove(Wrap::new(key)?),
         })
     }
 }
@@ -71,7 +71,7 @@ mod tests {
     use crate::common::tree::{Direction, Prefix};
 
     #[test]
-    fn operation() {
+    fn test_if_operation_gets_are_collected() {
         use Direction::{Left as L, Right as R};
 
         let prefix = Prefix::from_directions(vec![L, L, L, R, L, L, R, R, R, R, L, R, L, R, L, L]);
@@ -83,8 +83,8 @@ mod tests {
 
         assert_eq!(set.action, Action::Set(wrap!(0u32), wrap!(8u32)));
 
-        let remove = remove!(0u32);
+        let remove: Operation<u32, u32> = remove!(0u32);
         assert_eq!(remove.path, set.path);
-        assert_eq!(remove.action, Action::<u32, u32>::Remove);
+        assert_eq!(remove.action, Action::Remove(wrap!(0u32)));
     }
 }

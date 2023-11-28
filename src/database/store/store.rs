@@ -113,9 +113,8 @@ where
                         bincode::serialize(&value.inner()).unwrap(),
                     );
                 }
-                Action::Remove => {
-                    // TODO: implement
-                    println!("remove {:?}", operation.path);
+                Action::Remove(ref key) => {
+                    rocks_batch.delete(bincode::serialize(&(&table_name, key.inner())).unwrap());
                 }
                 Action::Get(..) => {}
             }

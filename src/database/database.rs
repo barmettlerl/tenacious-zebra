@@ -55,22 +55,22 @@ use talk::sync::lenders::AtomicLender;
 ///     let _ = table.execute(modify);
 ///
 ///     let mut read = TableTransaction::new();
-///     let query_key = read.get(&"Alice".to_string()).unwrap();
+///     let query_key = read.get("Alice".to_string()).unwrap();
 ///     let response = table.execute(read);
 ///
 ///     assert_eq!(response.get(&query_key), Some(&42));
 ///
 ///     // Let's remove "Alice" and set "Bob".
 ///     let mut modify = TableTransaction::new();
-///     modify.remove(&"Alice".to_string()).unwrap();
+///     modify.remove("Alice".to_string()).unwrap();
 ///     modify.set("Bob".to_string(), 23).unwrap();
 ///
 ///     // Ignore the response (modify only)
 ///     let _ = table.execute(modify);
 ///
 ///     let mut read = TableTransaction::new();
-///     let query_key_alice = read.get(&"Alice".to_string()).unwrap();
-///     let query_key_bob = read.get(&"Bob".to_string()).unwrap();
+///     let query_key_alice = read.get("Alice".to_string()).unwrap();
+///     let query_key_bob = read.get("Bob".to_string()).unwrap();
 ///     let response = table.execute(read);
 ///
 ///     assert_eq!(response.get(&query_key_alice), None);
@@ -426,8 +426,8 @@ mod tests {
             table1.execute(transaction);
 
             let mut transaction = TableTransaction::new();
-            transaction.remove(&0).unwrap();
-            transaction.remove(&1).unwrap();
+            transaction.remove(0).unwrap();
+            transaction.remove(1).unwrap();
 
             table1.execute(transaction);
         }

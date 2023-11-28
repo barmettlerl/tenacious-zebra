@@ -223,7 +223,7 @@ where
                 store.populate(label, node);
                 (store, batch, label)
             }
-            Action::Remove => (store, batch, Label::Empty),
+            Action::Remove(_) => (store, batch, Label::Empty),
         },
 
         // Node does not exists and we have more than one operation to do
@@ -255,7 +255,7 @@ where
                     (store, batch, label)
                 }
                 Action::Set(..) => (store, batch, target.label),
-                Action::Remove => (store, batch, Label::Empty),
+                Action::Remove(_) => (store, batch, Label::Empty),
             }
         }
         // Node already exists, the path does not reach it and we only have one GET operation to do
