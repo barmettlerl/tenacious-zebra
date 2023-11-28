@@ -1,5 +1,5 @@
 [package]
-name = "zebra"
+name = "tenaciouszebra"
 version = "0.1.0"
 authors = ["Matteo Monti <matteo.monti@epfl.ch>", "Manuel Vidigueira <manuel.ribeirovidigueira@epfl.ch>"]
 edition = "2018"
