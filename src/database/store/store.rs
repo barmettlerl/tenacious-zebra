@@ -1,25 +1,22 @@
+use std::iter;
+
 use crate::{
     common::{data::Bytes, store::Field, tree::Prefix},
     database::store::{Entry, Label, MapId, Node, Split},
 };
 
+use dashmap::DashMap;
+use dashmap::mapref::entry::{
+    Entry as DashMapEntry,
+    Entry::{Occupied, Vacant}
+};
 use oh_snap::Snap;
 
-use std::{
-    collections::{
-        hash_map::{
-            Entry as HashMapEntry,
-            Entry::{Occupied, Vacant},
-        },
-        HashMap,
-    },
-    iter,
-};
 
-pub(crate) type EntryMap<Key, Value> = HashMap<Bytes, Entry<Key, Value>>;
-pub(crate) type EntryMapEntry<'a, Key, Value> = HashMapEntry<'a, Bytes, Entry<Key, Value>>;
+pub(crate) type EntryMap<Key, Value> = DashMap<Bytes, Entry<Key, Value>>;
+pub(crate) type EntryMapEntry<'a, Key, Value> = DashMapEntry<'a, Bytes, Entry<Key, Value>>;
 
-pub(crate) const DEPTH: u8 = 8;
+pub(crate) const DEPTH: u8 = 1;
 
 pub(crate) struct Store<Key: Field, Value: Field> {
     maps: Snap<EntryMap<Key, Value>>,
@@ -353,7 +350,7 @@ mod tests {
             fn recursion<Key, Value>(
                 store: &mut Store<Key, Value>,
                 label: Label,
-                references: &mut HashMap<Label, HashSet<Reference>>,
+                references: &mut DashMap<Label, HashSet<Reference>>,
             ) where
                 Key: Field,
                 Value: Field,
@@ -372,7 +369,7 @@ mod tests {
                 }
             }
 
-            let mut references: HashMap<Label, HashSet<Reference>> = HashMap::new();
+            let mut references: DashMap<Label, HashSet<Reference>> = DashMap::new();
 
             for (id, held) in held.into_iter().enumerate() {
                 references
@@ -395,7 +392,7 @@ mod tests {
             }
         }
 
-        pub fn collect_records(&mut self, root: Label) -> HashMap<Key, Value>
+        pub fn collect_records(&mut self, root: Label) -> DashMap<Key, Value>
         where
             Key: Clone + Eq + Hash,
             Value: Clone,
@@ -403,7 +400,7 @@ mod tests {
             fn recursion<Key, Value>(
                 store: &mut Store<Key, Value>,
                 label: Label,
-                collector: &mut HashMap<Key, Value>,
+                collector: &mut DashMap<Key, Value>,
             ) where
                 Key: Field + Clone + Eq + Hash,
                 Value: Field + Clone,
@@ -422,7 +419,7 @@ mod tests {
                 }
             }
 
-            let mut collector = HashMap::new();
+            let mut collector = DashMap::new();
             recursion(self, root, &mut collector);
             collector
         }
@@ -497,19 +494,6 @@ mod tests {
             Split::Split(l, r) => (l, r),
             Split::Unsplittable(..) => unreachable!(),
         };
-
-        let (ll, lr) = match l.split() {
-            Split::Split(l, r) => (l, r),
-            Split::Unsplittable(..) => unreachable!(),
-        };
-
-        let (rl, rr) = match r.split() {
-            Split::Split(l, r) => (l, r),
-            Split::Unsplittable(..) => unreachable!(),
-        };
-
-        let l = Store::merge(ll, lr);
-        let r = Store::merge(rl, rr);
 
         let mut store = Store::merge(l, r);
 

@@ -9,7 +9,7 @@ use crate::{
     },
 };
 
-use std::collections::hash_map::Entry::{Occupied, Vacant};
+use dashmap::mapref::entry::Entry::{Occupied, Vacant};
 
 #[derive(Eq, PartialEq)]
 enum References {

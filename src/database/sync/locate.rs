@@ -6,7 +6,7 @@ use crate::{
     database::store::{Label, Node, Store},
 };
 
-use std::collections::hash_map::Entry::{Occupied, Vacant};
+use dashmap::mapref::entry::Entry::{Occupied, Vacant};
 
 enum Recursion {
     Recur(Label),

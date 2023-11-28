@@ -9,7 +9,7 @@ use crate::{
 
 use oh_snap::Snap;
 
-use std::collections::hash_map::Entry::{Occupied, Vacant};
+use dashmap::mapref::entry::Entry::{Occupied, Vacant};
 
 fn get<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Node<Key, Value>
 where

@@ -3,10 +3,10 @@ use crate::{
     database::store::{Label, Node, Split, Store, Wrap},
 };
 
-use std::collections::{
-    hash_map::Entry::{Occupied, Vacant},
-    LinkedList,
-};
+use std::collections::LinkedList;
+
+use dashmap::mapref::entry::Entry::{Occupied, Vacant};
+
 
 fn get<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Node<Key, Value>
 where

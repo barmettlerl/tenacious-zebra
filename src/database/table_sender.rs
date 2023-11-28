@@ -10,7 +10,7 @@ use crate::{
 
 use doomstack::{here, Doom, ResultExt, Top};
 
-use std::collections::hash_map::Entry::{Occupied, Vacant};
+use dashmap::mapref::entry::Entry::{Occupied, Vacant};
 
 pub struct TableSender<Key: Field, Value: Field>(Handle<Key, Value>);
 
@@ -89,7 +89,7 @@ mod tests {
 
     use crate::database::{store::MapId, Database};
 
-    use std::collections::hash_map::Entry::Occupied;
+    use dashmap::mapref::entry::Entry::Occupied;
 
     #[test]
     fn answer_empty() {

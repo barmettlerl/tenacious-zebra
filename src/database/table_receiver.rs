@@ -11,9 +11,10 @@ use crate::{
 
 use doomstack::{here, Doom, ResultExt, Top};
 
+use dashmap::{mapref::entry::Entry::{Occupied, Vacant}, DashMap};
+
 use std::collections::{
-    hash_map::Entry::{Occupied, Vacant},
-    HashMap, HashSet,
+    HashSet,
 };
 
 const DEFAULT_WINDOW: usize = 128;
@@ -22,8 +23,8 @@ pub struct TableReceiver<Key: Field, Value: Field> {
     cell: Cell<Key, Value>,
     root: Option<Label>,
     held: HashSet<Label>,
-    frontier: HashMap<Bytes, Context>,
-    acquired: HashMap<Bytes, Node<Key, Value>>,
+    frontier: DashMap<Bytes, Context>,
+    acquired: DashMap<Bytes, Node<Key, Value>>,
     pub settings: Settings,
 }
 
@@ -46,8 +47,8 @@ where
             cell,
             root: None,
             held: HashSet::new(),
-            frontier: HashMap::new(),
-            acquired: HashMap::new(),
+            frontier: DashMap::new(),
+            acquired: DashMap::new(),
             settings: Settings {
                 window: DEFAULT_WINDOW,
             },
@@ -196,7 +197,7 @@ where
         Question(
             self.frontier
                 .iter()
-                .map(|(_, context)| context.remote_label)
+                .map(|el|el.value().remote_label)
                 .take(self.settings.window)
                 .collect(),
         )
@@ -212,7 +213,8 @@ where
             let recursion = if stored {
                 None
             } else {
-                let node = self.acquired.get(&label.hash()).unwrap();
+                let acquired_node = self.acquired.get(&label.hash()).unwrap();
+                let node = acquired_node.value();
                 store.populate(label, node.clone());
 
                 match node {
