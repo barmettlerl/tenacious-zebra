@@ -10,7 +10,7 @@ edition = "2018"
 serde = { version = "~1.0", features = [ "derive", "rc" ] }
 serde_bytes = { version = "0.11.7" }
 serde_json = "1.0.107"
-oh-snap = { git="https://github.com/barmettlerl/oh-snap", rev="2b5e20ad694e91473de623ace044d2f9731eb510"}
+oh-snap = { git="https://github.com/barmettlerl/oh-snap"}
 talk = { git="https://github.com/barmettlerl/talk" }
 doomstack = { git = "https://github.com/Distributed-EPFL/doomstack" }
 rayon = { version = "1.5.1" }
