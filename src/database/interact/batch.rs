@@ -1,5 +1,4 @@
 use oh_snap::Snap;
-use serde::{Serialize, Deserialize};
 
 use crate::{common::store::Field, database::interact::Operation};
 
@@ -7,7 +6,6 @@ use rayon::prelude::*;
 
 use std::vec::Vec;
 
-#[derive(Serialize, Deserialize)]
 pub(crate) struct Batch<Key: Field, Value: Field> {
     operations: Snap<Operation<Key, Value>>,
 }
@@ -42,8 +40,6 @@ where
     pub fn operations_mut(&mut self) -> &mut [Operation<Key, Value>] {
         &mut self.operations
     }
-
-
 }
 
 #[cfg(test)]

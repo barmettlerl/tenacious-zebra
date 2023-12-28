@@ -1,13 +1,11 @@
 use crate::{
     common::{data::Bytes, store::Field, tree::Prefix},
-    database::{store::{Entry, Label, MapId, Node, Split}, interact::Batch},
+    database::store::{Entry, Label, MapId, Node, Split},
 };
 
-use okaywal::{WriteAheadLog, LogManager, EntryId, ReadChunkResult};
 use serde::{Serialize, Deserialize};
 
 use oh_snap::Snap;
-use talk::crypto::KeyCard;
 
 use std::{
     collections::{
@@ -17,7 +15,7 @@ use std::{
         },
         HashMap,
     },
-    iter, io, fmt::Debug,
+    iter,
 };
 
 pub(crate) type EntryMap<Key, Value> = HashMap<Bytes, Entry<Key, Value>>;
@@ -25,8 +23,8 @@ pub(crate) type EntryMapEntry<'a, Key, Value> = HashMapEntry<'a, Bytes, Entry<Ke
 
 pub(crate) const DEPTH: u8 = 8;
 
+#[derive(Serialize, Deserialize)]
 pub(crate) struct Store<Key: Field, Value: Field> {
-    log: WriteAheadLog,
     maps: Snap<EntryMap<Key, Value>>,
     scope: Prefix,
 }
@@ -38,7 +36,6 @@ where
 {
     pub fn new() -> Self {
         Store {
-            log: WriteAheadLog::recover("logging", LoggingCheckpointer),
             maps: Snap::new(
                 iter::repeat_with(|| EntryMap::new())
                     .take(1 << DEPTH)
@@ -50,7 +47,6 @@ where
 
     pub fn merge(left: Self, right: Self) -> Self {
         Store {
-            log: left.log,
             maps: Snap::merge(right.maps, left.maps),
             scope: left.scope.ancestor(1),
         }
@@ -63,13 +59,11 @@ where
             let (right_maps, left_maps) = self.maps.snap(mid); // `oh-snap` stores the lowest-index elements in `left`, while `zebra` stores them in `right`, hence the swap
 
             let left = Store {
-                log: self.log,
                 maps: left_maps,
                 scope: self.scope.left(),
             };
 
             let right = Store {
-                log: self.log,
                 maps: right_maps,
                 scope: self.scope.right(),
             };
@@ -78,12 +72,6 @@ where
         } else {
             Split::Unsplittable(self)
         }
-    }
-
-    pub fn logging(&self, batch: &Batch<Key, Value>) {
-        let mut writer = &self.log.begin_entry().unwrap();
-        let record = writer.write_chunk(&bincode::serialize(batch).unwrap()).unwrap();
-        writer.commit();
     }
 
 
@@ -180,77 +168,6 @@ where
 
 }
 
-#[derive(Debug)]
-struct LoggingCheckpointer<Key, Value> 
-where
-    Key: Field,
-    Value: Field,
-{
-    _phantom: std::marker::PhantomData<(Key, Value)>,
-}
-
-impl<'de, Key, Value> LogManager for LoggingCheckpointer<Key, Value> 
-where
-    Key: Field + Debug + Deserialize<'de>,
-    Value: Field + Debug + Deserialize<'de>,
-{
-    fn recover(&mut self, entry: &mut okaywal::Entry<'_>) -> io::Result<()> {
-        
-        let store = Store::<Key, Value>::new();
-        loop {
-            let mut chunk = match entry.read_chunk()? {
-                ReadChunkResult::Chunk(chunk) => chunk,
-                ReadChunkResult::EndOfEntry => break,
-                ReadChunkResult::AbortedEntry => return Ok(()),
-            };
-            let batch = bincode::deserialize::<Batch<Key, Value>>(&chunk.read_all().unwrap()).unwrap();
-
-            
-
-            if !chunk.check_crc()? {
-                return Err(io::Error::new(ErrorKind::InvalidData, "crc check failed"));
-            }
-        }
-
-        if let Some(all_chunks) = entry.read_chunk()? {
-            // Convert the Vec<u8>'s to Strings.
-            let all_chunks = all_chunks
-                .into_iter()
-                .map(String::from_utf8)
-                .collect::<Result<Vec<String>, _>>()
-                .expect("invalid utf-8");
-            println!(
-                "LoggingCheckpointer::recover(entry_id: {:?}, data: {:?})",
-                entry.id(),
-                all_chunks,
-            );
-        } else {
-            // This entry wasn't completely written. This could happen if a
-            // power outage or crash occurs while writing an entry.
-        }
-
-        Ok(())
-    }
-
-    fn checkpoint_to(
-        &mut self,
-        last_checkpointed_id: EntryId,
-        _checkpointed_entries: &mut SegmentReader,
-        _wal: &WriteAheadLog,
-    ) -> io::Result<()> {
-        // checkpoint_to is called once enough data has been written to the
-        // WriteAheadLog. After this function returns, the log will recycle the
-        // file containing the entries being checkpointed.
-        //
-        // This function is where the entries must be persisted to the storage
-        // layer the WriteAheadLog is sitting in front of. To ensure ACID
-        // compliance of the combination of the WAL and the storage layer, the
-        // storage layer must be fully resilliant to losing any changes made by
-        // the checkpointed entries before this function returns.
-        println!("LoggingCheckpointer::checkpoint_to({last_checkpointed_id:?}");
-        Ok(())
-    }
-}
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -1,10 +1,8 @@
-use serde::{Serialize, Deserialize};
-
 use crate::{common::store::Field, database::store::Wrap};
 
 use std::sync::Arc;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug)]
 pub(crate) enum Action<Key: Field, Value: Field> {
     Get(Option<Arc<Value>>),
     Set(Wrap<Key>, Wrap<Value>),
