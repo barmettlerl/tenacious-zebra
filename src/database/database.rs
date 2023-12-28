@@ -88,7 +88,7 @@ where
 {
     pub(crate) log: WriteAheadLog,
     pub(crate) store: Cell<Key, Value>,
-    pub(crate) tables: RwLock<Vec<Arc<Table<Key, Value>>>>,
+    pub(crate) tables: Arc<RwLock<Vec<Table<Key, Value>>>>,
 }
 
 impl<Key, Value> Database<Key, Value>
@@ -104,27 +104,31 @@ where
     /// use tenaciouszebra::database::{Database, TableTransaction};
     /// let mut database: Database<String, i32> = Database::new();
     /// ```
-    pub fn new(log_path: &str) -> Self {
+    pub fn new(log_path: &str) -> Self { 
+        let store = Cell::new(AtomicLender::new(Store::<Key, Value>::new()));
+        let tables = Arc::new(RwLock::new(Vec::new()));
         Database {
-            log: WriteAheadLog::recover(Path::new(log_path), LoggingCheckpointer::<Key, Value>::new()).unwrap(),
-            store: Cell::new(AtomicLender::new(Store::new())),
-            tables: RwLock::new(Vec::new()),
+            log: WriteAheadLog::recover(Path::new(log_path), LoggingCheckpointer::<Key, Value>::new(store.clone(), tables.clone())).unwrap(),
+            store,
+            tables,
         }
     }
 
     pub(crate) fn from_store(store: Store<Key, Value>, log_path: &str) -> Self {
+        let store = Cell::new(AtomicLender::new(store));
+        let tables = Arc::new(RwLock::new(Vec::new()));
         Database {
-            log: WriteAheadLog::recover(log_path, LoggingCheckpointer::<Key, Value>::new()).unwrap(),
-            store: Cell::new(AtomicLender::new(store)),
-            tables: RwLock::new(Vec::new()),
+            log: WriteAheadLog::recover(log_path, LoggingCheckpointer::<Key, Value>::new(store.clone(), tables.clone())).unwrap(),
+            store,
+            tables,
         }
     }
 
-    pub(crate) fn add_table(&self, table: Arc<Table<Key, Value>>) {
+    pub(crate) fn add_table(&self, table: Table<Key, Value>) {
         self.tables.write().unwrap().push(table);
     }
 
-    pub fn get_table(&self, name: &str) -> Option<Arc<Table<Key, Value>>> {
+    pub fn get_table(&self, name: &str) -> Option<Table<Key, Value>> {
         self.tables.read().unwrap().iter().find(|e| e.get_name() == name).cloned()
     }
 
@@ -138,8 +142,8 @@ where
     ///
     /// let table = database.empty_table("test");
     /// ```
-    pub fn empty_table(&self, name: &str) -> Arc<Table<Key, Value>> {
-        let table = Arc::new(Table::empty(self.store.clone(), name.to_string(), self.log.clone()));
+    pub fn empty_table(&self, name: &str) -> Table<Key, Value> {
+        let table = Table::empty(self.store.clone(), name.to_string(), self.log.clone());
         self.tables.write().unwrap().push(table.clone());
         table
     }
@@ -185,14 +189,14 @@ where
         Database {
             log: self.log.clone(),
             store: self.store.clone(),
-            tables: RwLock::new(self.tables.read().unwrap().clone()),
+            tables: self.tables.clone(),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use serde::{Deserialize, Serialize, de::DeserializeOwned};
+    use serde::{Serialize, de::DeserializeOwned};
 
     use super::*;
 
@@ -203,7 +207,7 @@ mod tests {
         Key: Field + Serialize + std::fmt::Debug + DeserializeOwned,
         Value: Field + Serialize + std::fmt::Debug + DeserializeOwned,
     {
-        pub(crate) fn table_with_records<I>(&self, records: I) -> Arc<Table<Key, Value>>
+        pub(crate) fn table_with_records<I>(&self, records: I) -> Table<Key, Value>
         where
             I: IntoIterator<Item = (Key, Value)>,
         {
@@ -259,7 +263,7 @@ mod tests {
         let _ = table.execute(transaction);
         table.assert_records((0..256).map(|i| (i, if i < 128 { i } else { i + 1 })));
 
-        database.check_correctness([table.as_ref()], []);
+        database.check_correctness([&table], []);
     }
 
     #[test]

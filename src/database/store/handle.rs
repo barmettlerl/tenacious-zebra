@@ -18,6 +18,7 @@ use std::{
 
 use talk::crypto::primitives::hash::Hash;
 
+#[derive(Debug)]
 pub(crate) struct Handle<Key: Field, Value: Field> {
     pub log: WriteAheadLog,
     pub cell: Cell<Key, Value>,

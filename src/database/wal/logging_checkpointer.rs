@@ -1,13 +1,14 @@
-use std::{io::{self, Read}, marker::PhantomData};
+use std::{io::{self, Read}, marker::PhantomData, sync::{RwLock, Arc}};
 
 use okaywal::{LogManager, Entry, SegmentReader, EntryId, WriteAheadLog, ReadChunkResult};
 use serde::de::DeserializeOwned;
 
-use crate::{common::store::Field, database::wal::write_log::LogEntry};
+use crate::{common::store::Field, database::{wal::write_log::LogEntry, store::Cell, Table}};
 
 #[derive(Debug)]
 pub (crate) struct LoggingCheckpointer<Key: Field, Value: Field> {
-    _marker: PhantomData<(Key, Value)>,
+    store: Cell<Key, Value>,
+    tables: Arc<RwLock<Vec<Table<Key, Value>>>>,
 }
 
 impl<Key, Value> LoggingCheckpointer<Key, Value>
@@ -15,9 +16,10 @@ where
     Key: Field,
     Value: Field,
 {
-    pub fn new() -> Self {
+    pub fn new(store: Cell<Key, Value>, tables: Arc<RwLock<Vec<Table<Key, Value>>>>) -> Self {
         LoggingCheckpointer {
-            _marker: PhantomData,
+            store,
+            tables,
         }
     }
 

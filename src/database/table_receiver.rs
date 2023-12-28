@@ -260,7 +260,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use serde::{Serialize, Deserialize};
+    use serde::{Serialize, Deserialize, de::DeserializeOwned};
 
     use super::*;
 
@@ -323,8 +323,8 @@ mod tests {
     ) -> ([Table<Key, Value>; N], usize)
     where
         I: IntoIterator<Item = &'a Table<Key, Value>>,
-        Key: Field + Serialize + Deserialize<'de>,
-        Value: Field + Serialize + Deserialize<'de>,
+        Key: Field + Serialize + DeserializeOwned,
+        Value: Field + Serialize + DeserializeOwned,
     {
         let mut transfers: [Transfer<Key, Value>; N] = array_init::from_iter(
             IntoIterator::into_iter(transfers).map(|(sender, receiver)| {

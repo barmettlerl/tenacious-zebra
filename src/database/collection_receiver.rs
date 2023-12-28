@@ -23,7 +23,7 @@ where
         let status = self.0.learn(answer)?;
 
         let status = match status {
-            TableStatus::Complete(table) => CollectionStatus::Complete(Collection(Arc::new(table))),
+            TableStatus::Complete(table) => CollectionStatus::Complete(Collection(table)),
             TableStatus::Incomplete(receiver, question) => {
                 CollectionStatus::Incomplete(CollectionReceiver(receiver), question)
             }

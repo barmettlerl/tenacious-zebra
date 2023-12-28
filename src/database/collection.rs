@@ -7,7 +7,7 @@ use std::{collections::HashSet, hash::Hash as StdHash, sync::Arc};
 
 use talk::crypto::primitives::hash::Hash;
 
-pub struct Collection<Item: Field>(pub(crate) Arc<Table<Item, ()>>);
+pub struct Collection<Item: Field>(pub(crate) Table<Item, ()>);
 
 impl<Item> Collection<Item>
 where

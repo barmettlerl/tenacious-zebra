@@ -25,6 +25,6 @@ where
     }
 
     pub fn end(self, name: String) -> Collection<Item> {
-        Collection(Arc::new(self.0.end(name)))
+        Collection(self.0.end(name))
     }
 }
