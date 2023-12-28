@@ -4,6 +4,7 @@ mod macros;
 mod interact;
 mod store;
 mod sync;
+mod wal;
 
 mod collection;
 mod collection_answer;

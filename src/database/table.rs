@@ -77,7 +77,7 @@ where
     ///
     /// fn main() {
     ///
-    ///     let mut database = Database::new();
+    ///     let mut database = Database::default();
     ///
     ///     // Create a new transaction.
     ///     let mut transaction = TableTransaction::new();
@@ -104,6 +104,9 @@ where
         &self,
         transaction: TableTransaction<Key, Value>,
     ) -> TableResponse<Key, Value> {
+
+        
+
         let (tid, batch) = transaction.finalize();
         let batch = self.0.apply(batch);
         TableResponse::new(tid, batch)
@@ -151,7 +154,7 @@ where
     /// ```
     /// use tenaciouszebra::database::Database;
     ///
-    /// let mut database: Database<u32, u32> = Database::new();
+    /// let mut database: Database<u32, u32> = Database::default();
     /// let original = database.empty_table("test");
     ///
     /// // Sending consumes the copy so we typically clone first, which is cheap.
@@ -282,7 +285,7 @@ mod tests {
 
     #[test]
     fn export_empty() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::default();
         let table = database.empty_table("test");
 
         let map = table.export::<[u32; 0], u32>([]).unwrap(); // Explicit type arguments are to aid type inference on an empty array
@@ -296,7 +299,7 @@ mod tests {
 
     #[test]
     fn export_none() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::default();
         let table = database.empty_table("test");
 
         let mut transaction = TableTransaction::new();
@@ -317,7 +320,7 @@ mod tests {
 
     #[test]
     fn export_single() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::default();
         let table = database.empty_table("test");
 
         let mut transaction = TableTransaction::new();
@@ -338,7 +341,7 @@ mod tests {
 
     #[test]
     fn export_half() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::default();
         let table = database.empty_table("test");
 
         let mut transaction = TableTransaction::new();
@@ -360,7 +363,7 @@ mod tests {
 
     #[test]
     fn export_all() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::default();
         let table = database.empty_table("test");
 
         let mut transaction = TableTransaction::new();
@@ -380,7 +383,7 @@ mod tests {
 
     #[test]
     fn diff_empty_empty() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::default();
 
         let mut lho = database.empty_table("test");
         let mut rho = database.empty_table("test2");
@@ -390,7 +393,7 @@ mod tests {
 
     #[test]
     fn diff_identity_empty() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::default();
 
         let mut lho = database.empty_table("test");
         let mut rho = database.empty_table("test2");
@@ -418,7 +421,7 @@ mod tests {
 
     #[test]
     fn diff_identity_match() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::default();
 
         let mut lho = database.empty_table("test");
         let mut rho = database.empty_table("test2");
@@ -447,7 +450,7 @@ mod tests {
 
     #[test]
     fn diff_identity_successor() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::default();
 
         let mut lho = database.empty_table("test");
         let mut rho = database.empty_table("test2");
@@ -482,7 +485,7 @@ mod tests {
 
     #[test]
     fn diff_first_identity_match_rest_successor() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::default();
 
         let mut lho = database.empty_table("test");
         let mut rho = database.empty_table("test2");
@@ -527,7 +530,7 @@ mod tests {
 
     #[test]
     fn diff_half_identity_match_half_successor() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::default();
 
         let mut lho = database.empty_table("test");
         let mut rho = database.empty_table("test2");
@@ -575,7 +578,7 @@ mod tests {
 
     #[test]
     fn diff_identity_overlap() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::default();
 
         let mut lho = database.empty_table("test");
         let mut rho = database.empty_table("test2");
@@ -632,7 +635,7 @@ mod tests {
 
         const SETS: &[Set] = &[Set::Identity, Set::Successor, Set::Empty];
 
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::default();
         let mut rng = rand::thread_rng();
 
         for _ in 0..512 {

@@ -1,4 +1,5 @@
 use std::{sync::{RwLock, Arc}, path::Path, io::{Write, Read}};
+use okaywal::WriteAheadLog;
 use serde::{Serialize, de::DeserializeOwned};
 use bincode;
 use crate::{
@@ -11,7 +12,7 @@ use crate::{
 
 use talk::sync::lenders::AtomicLender;
 
-use super::store::Label;
+use super::{store::Label, wal::logging_checkpointer::LoggingCheckpointer};
 
 /// A datastrucure for memory-efficient storage and transfer of maps with a
 /// large degree of similarity (% of key-pairs in common).
@@ -87,6 +88,7 @@ where
     Key: Field,
     Value: Field,
 {
+    pub(crate) log: WriteAheadLog,
     pub(crate) store: Cell<Key, Value>,
     pub(crate) tables: RwLock<Vec<Arc<Table<Key, Value>>>>,
 }
@@ -104,15 +106,17 @@ where
     /// use tenaciouszebra::database::{Database, TableTransaction};
     /// let mut database: Database<String, i32> = Database::new();
     /// ```
-    pub fn new() -> Self {
+    pub fn new(log_path: &str) -> Self {
         Database {
+            log: WriteAheadLog::recover(Path::new(log_path), LoggingCheckpointer).unwrap(),
             store: Cell::new(AtomicLender::new(Store::new())),
             tables: RwLock::new(Vec::new()),
         }
     }
 
-    pub(crate) fn from_store(store: Store<Key, Value>) -> Self {
+    pub(crate) fn from_store(store: Store<Key, Value>, log_path: &str) -> Self {
         Database {
+            log: WriteAheadLog::recover(log_path, LoggingCheckpointer).unwrap(),
             store: Cell::new(AtomicLender::new(store)),
             tables: RwLock::new(Vec::new()),
         }
@@ -170,109 +174,8 @@ where
     Value: Field,
 {
     fn default() -> Self {
-        Self::new()
+        Self::new("log")
     }
-}
-
-impl<Key, Value> Database<Key, Value>
-    where
-        Key: Field + Serialize + DeserializeOwned,
-        Value: Field + Serialize + DeserializeOwned,
-    {
-
-    /// Creates a backup of the database in the specified folder.
-    /// 
-    /// # Examples
-    /// 
-    /// ```
-    ///
-    /// use tenaciouszebra::database::{Database, TableTransaction};
-    /// let database = Database::new();
-    /// 
-    /// let mut modify = TableTransaction::new();
-    /// modify.set("Alice".to_string(), 42).unwrap();
-    /// 
-    /// 
-    /// let table = database.empty_table("test");
-    /// let _ = table.execute(modify);
-    /// 
-    /// database.backup("./backup");
-    /// 
-    /// let new_database = Database::<String, i32>::restore("./backup");
-    /// 
-    /// let new_table = new_database.get_table("test").unwrap();
-    /// 
-    /// let mut read = TableTransaction::new();
-    /// let query_key = read.get(&"Alice".to_string()).unwrap();
-    /// let response = new_table.execute(read);
-    /// ```
-    pub fn backup(&self, folder_path: &str){
-        
-        if !Path::new(folder_path).exists() {
-            std::fs::create_dir(folder_path).unwrap();
-        }
-
-        let mut file = std::fs::File::create(format!("{}/store", folder_path)).unwrap();
-        let store = self.store.take();
-        let store_str = bincode::serialize(&store).unwrap();
-        self.store.restore(store);
-
-        file.write_all(&store_str).unwrap();
-        
-        let mut file = std::fs::File::create(format!("{}/tables", folder_path)).unwrap();
-        let tables = self.tables.write().unwrap();
-        let labels: Vec<(String, Label)> = tables.to_vec().iter().map(|e| {(e.get_name(), e.get_root())}).collect();
-        let tables_str = bincode::serialize(&labels).unwrap();
-        file.write_all(&tables_str).unwrap();
-    }
-
-    /// Restores a database from a backup.
-    /// 
-    /// # Examples
-    /// 
-    /// ```
-    ///
-    /// use tenaciouszebra::database::{Database, TableTransaction};
-    /// let database = Database::new();
-    /// 
-    /// let mut modify = TableTransaction::new();
-    /// modify.set("Alice".to_string(), 42).unwrap();
-    /// 
-    /// 
-    /// let table = database.empty_table("test");
-    /// let _ = table.execute(modify);
-    /// 
-    /// database.backup("./backup");
-    /// 
-    /// let new_database = Database::<String, i32>::restore("./backup");
-    /// 
-    /// let new_table = new_database.get_table("test").unwrap();
-    /// 
-    /// let mut read = TableTransaction::new();
-    /// let query_key = read.get(&"Alice".to_string()).unwrap();
-    /// let response = new_table.execute(read);
-    /// ```
-    pub fn restore(folder_path: &str) -> Self{
-        let mut file = std::fs::File::open(format!("{}/store", folder_path)).unwrap();
-        
-        let mut store_str = Vec::<u8>::new();
-        file.read_to_end(&mut store_str).unwrap();
-        let store: Store<Key, Value> = bincode::deserialize(&store_str).unwrap();
-        let database = Database::from_store(store);
-
-        let mut file = std::fs::File::open(format!("{}/tables", folder_path)).unwrap();
-        let mut tables_str = Vec::<u8>::new();
-        file.read_to_end(&mut tables_str).unwrap();
-        let labels: Vec<(String, Label)> = bincode::deserialize(&tables_str).unwrap();
-        labels.iter().for_each(|e| {
-            database.add_table(Arc::new(Table::new(database.store.clone(), e.1, e.0.clone())))
-        });
-
-        database.tables.read().unwrap().iter().for_each(|e| e.check());
-
-        database
-    }
-    
 }
 
 impl<Key, Value> Clone for Database<Key, Value>
@@ -282,6 +185,7 @@ where
 {
     fn clone(&self) -> Self {
         Database {
+            log: self.log.clone(),
             store: self.store.clone(),
             tables: RwLock::new(self.tables.read().unwrap().clone()),
         }
@@ -346,7 +250,7 @@ mod tests {
 
     #[test]
     fn test_if_table_is_correct_after_execution_of_operations() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::default();
 
         let table = database.table_with_records((0..256).map(|i| (i, i)));
 
@@ -362,7 +266,7 @@ mod tests {
 
     #[test]
     fn test_if_changes_are_seen_when_clone_of_table_is_modified() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::default();
 
         let table = database.table_with_records((0..256).map(|i| (i, i)));
         let table_clone = table.clone();
@@ -378,7 +282,7 @@ mod tests {
 
     #[test]
     fn test_if_len_is_correct_when_database_contains_zero_elements() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::default();
         let tables = database.tables.read().unwrap();
 
         assert_eq!(tables.len(), 0)
@@ -386,7 +290,7 @@ mod tests {
 
     #[test]
     fn test_if_len_is_correct_when_database_contains_one_element() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::default();
 
         database.empty_table("test");
 
@@ -397,7 +301,7 @@ mod tests {
 
     #[test]
     fn test_if_database_sees_changes_made_on_table() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::default();
 
         let table = database.table_with_records((0..256).map(|i| (i, i)));
 

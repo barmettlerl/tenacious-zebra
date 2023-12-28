@@ -385,8 +385,8 @@ mod tests {
 
     #[test]
     fn empty() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.empty_table("test");
         let mut sender = original.send();
@@ -400,8 +400,8 @@ mod tests {
 
     #[test]
     fn single() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records([(0, 1)]);
         let mut sender = original.send();
@@ -415,8 +415,8 @@ mod tests {
 
     #[test]
     fn tree() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records((0..8).map(|i| (i, i)));
         let mut sender = original.send();
@@ -430,8 +430,8 @@ mod tests {
 
     #[test]
     fn multiple() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records((0..256).map(|i| (i, i)));
         let mut sender = original.send();
@@ -444,8 +444,8 @@ mod tests {
 
     #[test]
     fn single_then_single() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records([(0, 1)]);
         let mut sender = original.send();
@@ -468,8 +468,8 @@ mod tests {
 
     #[test]
     fn single_then_same() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records([(0, 1)]);
         let mut sender = original.send();
@@ -489,8 +489,8 @@ mod tests {
 
     #[test]
     fn tree_then_same() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records((0..8).map(|i| (i, i)));
         let mut sender = original.send();
@@ -510,8 +510,8 @@ mod tests {
 
     #[test]
     fn multiple_then_multiple() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records((0..256).map(|i| (i, i)));
         let mut sender = original.send();
@@ -532,8 +532,8 @@ mod tests {
 
     #[test]
     fn multiple_then_same() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records((0..256).map(|i| (i, i)));
         let mut sender = original.send();
@@ -552,8 +552,8 @@ mod tests {
 
     #[test]
     fn multiple_then_subset() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records((0..256).map(|i| (i, i)));
         let mut sender = original.send();
@@ -575,8 +575,8 @@ mod tests {
 
     #[test]
     fn multiple_then_superset() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records((0..256).map(|i| (i, i)));
         let mut sender = original.send();
@@ -597,8 +597,8 @@ mod tests {
 
     #[test]
     fn multiple_then_overlap() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records((0..256).map(|i| (i, i)));
         let mut sender = original.send();
@@ -619,8 +619,8 @@ mod tests {
 
     #[test]
     fn multiple_then_multiple_then_overlap() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records((0..256).map(|i| (i, i)));
         let mut sender = original.send();
@@ -649,8 +649,8 @@ mod tests {
 
     #[test]
     fn multiple_interleave_multiple() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let first_original = alice.table_with_records((0..256).map(|i| (i, i)));
         let mut first_sender = first_original.send();
@@ -676,8 +676,8 @@ mod tests {
 
     #[test]
     fn multiple_interleave_same() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let first_original = alice.table_with_records((0..256).map(|i| (i, i)));
         let mut first_sender = first_original.send();
@@ -703,8 +703,8 @@ mod tests {
 
     #[test]
     fn multiple_interleave_overlap() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let first_original = alice.table_with_records((0..256).map(|i| (i, i)));
         let mut first_sender = first_original.send();
@@ -730,8 +730,8 @@ mod tests {
 
     #[test]
     fn multiple_then_double_overlap() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records((0..256).map(|i| (i, i)));
         let mut sender = original.send();
@@ -765,8 +765,8 @@ mod tests {
 
     #[test]
     fn multiple_then_overlap_drop_received_midway() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records((0..256).map(|i| (i, i)));
         let mut sender = original.send();
@@ -804,8 +804,8 @@ mod tests {
 
     #[test]
     fn multiple_acceptable_benign() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records((0..256).map(|i| (i, i)));
         let mut sender = original.send();
@@ -835,8 +835,8 @@ mod tests {
 
     #[test]
     fn multiple_unacceptable_benign() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records((0..256).map(|i| (i, i)));
         let sender = original.send();
@@ -864,8 +864,8 @@ mod tests {
 
     #[test]
     fn multiple_malicious_internal_topology_empty_leaf() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records((0..100).map(|i| (i, i)));
         let sender = original.send();
@@ -898,8 +898,8 @@ mod tests {
 
     #[test]
     fn multiple_malicious_internal_topology_leaf_empty() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records((0..100).map(|i| (i, i)));
         let sender = original.send();
@@ -932,8 +932,8 @@ mod tests {
 
     #[test]
     fn multiple_malicious_internal_topology_empty_empty() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records((0..100).map(|i| (i, i)));
         let sender = original.send();
@@ -962,8 +962,8 @@ mod tests {
 
     #[test]
     fn multiple_malicious_internal_map_id() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records((0..256).map(|i| (i, i)));
         let mut sender = original.send();
@@ -1002,8 +1002,8 @@ mod tests {
 
     #[test]
     fn multiple_malicious_leaf_key_recover() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records((0..256).map(|i| (i, i)));
         let mut sender = original.send();
@@ -1042,8 +1042,8 @@ mod tests {
 
     #[test]
     fn swapped_leaf_positions() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records((4..=5).map(|i| (i, i)));
         let sender = original.send();
@@ -1065,8 +1065,8 @@ mod tests {
 
     #[test]
     fn empty_node_hello() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records((0..1).map(|i| (i, i)));
         let sender = original.send();
@@ -1086,8 +1086,8 @@ mod tests {
 
     #[test]
     fn malicious_internal_swap_location_root() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records((0..256).map(|i| (i, i)));
         let mut sender = original.send();
@@ -1131,8 +1131,8 @@ mod tests {
 
     #[test]
     fn malicious_internal_swap_location_deep() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+        let alice: Database<u32, u32> = Database::default();
+        let bob: Database<u32, u32> = Database::default();
 
         let original = alice.table_with_records((0..256).map(|i| (i, i)));
         let mut sender = original.send();

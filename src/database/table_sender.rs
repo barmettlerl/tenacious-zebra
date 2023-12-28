@@ -94,7 +94,7 @@ mod tests {
 
     #[test]
     fn answer_empty() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::default();
         let table = database.empty_table("test");
 
         let send = table.send();
@@ -106,7 +106,7 @@ mod tests {
 
     #[test]
     fn answer_non_existant() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::default();
         let table = database.empty_table("test");
 
         let send = table.send();
@@ -125,7 +125,7 @@ mod tests {
 
     #[test]
     fn grab_one() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::default();
         let table = database.table_with_records([(0u32, 0u32)]);
 
         let send = table.send();
@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn grab_three() {
-        let database: Database<u32, u32> = Database::new();
+        let database: Database<u32, u32> = Database::default();
         let table = database.table_with_records([(0u32, 0u32), (4u32, 4u32)]);
 
         let send = table.send();
