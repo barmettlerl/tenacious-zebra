@@ -1,27 +1,47 @@
-use std::io;
+use std::{io::{self, Read}, marker::PhantomData};
 
-use okaywal::{LogManager, Entry, SegmentReader, EntryId, WriteAheadLog};
+use okaywal::{LogManager, Entry, SegmentReader, EntryId, WriteAheadLog, ReadChunkResult};
+use serde::de::DeserializeOwned;
+
+use crate::{common::store::Field, database::wal::write_log::LogEntry};
 
 #[derive(Debug)]
-pub (crate) struct LoggingCheckpointer;
+pub (crate) struct LoggingCheckpointer<Key: Field, Value: Field> {
+    _marker: PhantomData<(Key, Value)>,
+}
 
-impl LogManager for LoggingCheckpointer {
+impl<Key, Value> LoggingCheckpointer<Key, Value>
+where
+    Key: Field,
+    Value: Field,
+{
+    pub fn new() -> Self {
+        LoggingCheckpointer {
+            _marker: PhantomData,
+        }
+    }
+
+}
+
+
+impl<Key, Value> LogManager for LoggingCheckpointer<Key, Value>
+
+where 
+    Key: Field + std::fmt::Debug + DeserializeOwned,
+    Value: Field + std::fmt::Debug + DeserializeOwned,
+{
     fn recover(&mut self, entry: &mut Entry<'_>) -> io::Result<()> {
         // This example uses read_all_chunks to load the entire entry into
         // memory for simplicity. The crate also supports reading each chunk
         // individually to minimize memory usage.
+
         if let Some(all_chunks) = entry.read_all_chunks()? {
             // Convert the Vec<u8>'s to Strings.
             let all_chunks = all_chunks
                 .into_iter()
-                .map(String::from_utf8)
-                .collect::<Result<Vec<String>, _>>()
-                .expect("invalid utf-8");
-            println!(
-                "LoggingCheckpointer::recover(entry_id: {:?}, data: {:?})",
-                entry.id(),
-                all_chunks,
-            );
+                .map(|chunk| bincode::deserialize::<LogEntry<Key, Value>>(&chunk).unwrap());
+            
+            println!(" len chunks: {:?}", all_chunks.count());
         } else {
             // This entry wasn't completely written. This could happen if a
             // power outage or crash occurs while writing an entry.

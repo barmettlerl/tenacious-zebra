@@ -19,7 +19,7 @@ use talk::crypto::primitives::{hash, hash::Hash};
 #[allow(unused_imports)]
 use crate::database::{Database, TableReceiver};
 
-use super::store::{Store, Node, Wrap};
+use super::{store::{Store, Node, Wrap}, interact::Operation, wal::write_log};
 
 /// A map implemented using Merkle Patricia Trees.
 ///
@@ -106,9 +106,9 @@ where
         transaction: TableTransaction<Key, Value>,
     ) -> TableResponse<Key, Value> {
 
-        
-
         let (tid, batch) = transaction.finalize();
+        write_log::write_log(&self.0.log, &batch);
+
         let batch = self.0.apply(batch);
         TableResponse::new(tid, batch)
     }

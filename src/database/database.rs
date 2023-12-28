@@ -93,8 +93,8 @@ where
 
 impl<Key, Value> Database<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + std::fmt::Debug + serde::de::DeserializeOwned,
+    Value: Field + std::fmt::Debug + serde::de::DeserializeOwned,
 {
     /// Creates an empty `Database`.
     ///
@@ -106,7 +106,7 @@ where
     /// ```
     pub fn new(log_path: &str) -> Self {
         Database {
-            log: WriteAheadLog::recover(Path::new(log_path), LoggingCheckpointer).unwrap(),
+            log: WriteAheadLog::recover(Path::new(log_path), LoggingCheckpointer::<Key, Value>::new()).unwrap(),
             store: Cell::new(AtomicLender::new(Store::new())),
             tables: RwLock::new(Vec::new()),
         }
@@ -114,7 +114,7 @@ where
 
     pub(crate) fn from_store(store: Store<Key, Value>, log_path: &str) -> Self {
         Database {
-            log: WriteAheadLog::recover(log_path, LoggingCheckpointer).unwrap(),
+            log: WriteAheadLog::recover(log_path, LoggingCheckpointer::<Key, Value>::new()).unwrap(),
             store: Cell::new(AtomicLender::new(store)),
             tables: RwLock::new(Vec::new()),
         }
@@ -168,8 +168,8 @@ where
 
 impl<Key, Value> Default for Database<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + std::fmt::Debug + serde::de::DeserializeOwned,
+    Value: Field + std::fmt::Debug + serde::de::DeserializeOwned,
 {
     fn default() -> Self {
         Self::new("log")
@@ -192,16 +192,16 @@ where
 
 #[cfg(test)]
 mod tests {
-    use serde::{Deserialize, Serialize};
+    use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
     use super::*;
 
     use crate::database::{store::Label, TableTransaction};
 
-    impl<'de, Key, Value> Database<Key, Value>
+    impl<Key, Value> Database<Key, Value>
     where
-        Key: Field + Serialize + Deserialize<'de>,
-        Value: Field + Serialize + Deserialize<'de>,
+        Key: Field + Serialize + std::fmt::Debug + DeserializeOwned,
+        Value: Field + Serialize + std::fmt::Debug + DeserializeOwned,
     {
         pub(crate) fn table_with_records<I>(&self, records: I) -> Arc<Table<Key, Value>>
         where
@@ -222,8 +222,8 @@ mod tests {
         where
             I: IntoIterator<Item = &'a Table<Key, Value>>,
             J: IntoIterator<Item = &'a TableReceiver<Key, Value>>,
-            Key: Field + Deserialize<'de>,
-            Value: Field + Deserialize<'de>,
+            Key: Field + DeserializeOwned,
+            Value: Field + DeserializeOwned,
         {
             let tables: Vec<&'a Table<Key, Value>> = tables.into_iter().collect();
 

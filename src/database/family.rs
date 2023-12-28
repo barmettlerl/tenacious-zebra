@@ -1,4 +1,8 @@
 
+use std::fmt::Debug;
+
+use serde::de::DeserializeOwned;
+
 use crate::{
     common::store::Field,
     database::{Collection, CollectionReceiver, Database},
@@ -9,7 +13,7 @@ pub struct Family<Item: Field>(pub(crate) Database<Item, ()>);
 
 impl<'de, Item> Family<Item>
 where
-    Item: Field,
+    Item: Field + DeserializeOwned + Debug,
 {
     pub fn new(log_path: &str) -> Self {
         Family(Database::new(log_path))
