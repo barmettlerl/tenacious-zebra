@@ -10,16 +10,18 @@ use crate::{
 };
 
 use doomstack::{here, Doom, ResultExt, Top};
+use okaywal::WriteAheadLog;
 
-use std::collections::{
+use std::{collections::{
     hash_map::Entry::{Occupied, Vacant},
     HashMap, HashSet,
-};
+}};
 
 const DEFAULT_WINDOW: usize = 128;
 
 pub struct TableReceiver<Key: Field, Value: Field> {
     cell: Cell<Key, Value>,
+    log: WriteAheadLog,
     root: Option<Label>,
     name: String,
     held: HashSet<Label>,
@@ -42,7 +44,7 @@ where
     Key: Field,
     Value: Field,
 {
-    pub(crate) fn new(cell: Cell<Key, Value>) -> Self {
+    pub(crate) fn new(cell: Cell<Key, Value>, log: WriteAheadLog) -> Self {
         TableReceiver {
             cell,
             root: None,
@@ -53,6 +55,7 @@ where
             settings: Settings {
                 window: DEFAULT_WINDOW,
             },
+            log
         }
     }
 
@@ -83,7 +86,7 @@ where
                         self.flush(&mut store, root);
                         self.cell.restore(store);
 
-                        Ok(TableStatus::Complete(Table::new(self.cell.clone(), root, self.name.clone())))
+                        Ok(TableStatus::Complete(Table::new(self.cell.clone(), root, self.name.clone(), self.log.clone())))
                     }
                     None => {
                         // No node received: the new table's `root` should be `Empty`
@@ -92,6 +95,7 @@ where
                             self.cell.clone(),
                             Label::Empty,
                             self.name.clone(),
+                            self.log.clone(),
                         )))
                     }
                 }

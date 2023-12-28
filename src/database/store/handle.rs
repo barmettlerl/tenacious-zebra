@@ -8,6 +8,7 @@ use crate::{
 };
 
 use oh_snap::Snap;
+use okaywal::WriteAheadLog;
 
 use std::{
     collections::{hash_map::Entry, HashMap},
@@ -18,6 +19,7 @@ use std::{
 use talk::crypto::primitives::hash::Hash;
 
 pub(crate) struct Handle<Key: Field, Value: Field> {
+    pub log: WriteAheadLog,
     pub cell: Cell<Key, Value>,
     pub root: RwLock<Label>,
 }
@@ -27,15 +29,16 @@ where
     Key: Field,
     Value: Field,
 {
-    pub fn empty(cell: Cell<Key, Value>) -> Self {
+    pub fn empty(cell: Cell<Key, Value>, log: WriteAheadLog) -> Self {
         Handle {
+            log,
             cell,
             root: RwLock::new(Label::Empty),
         }
     }
 
-    pub fn new(cell: Cell<Key, Value>, root: Label) -> Self {
-        Handle { cell, root: RwLock::new(root) }
+    pub fn new(cell: Cell<Key, Value>, log: WriteAheadLog, root: Label) -> Self {
+        Handle { cell, log, root: RwLock::new(root) }
     }
 
     pub fn commit(&self) -> Hash {
@@ -128,6 +131,7 @@ where
 
         Handle {
             cell: self.cell.clone(),
+            log: self.log.clone(),
             root: RwLock::new(self.root.read().unwrap().clone()),
         }
     }

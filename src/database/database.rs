@@ -1,9 +1,7 @@
-use std::{sync::{RwLock, Arc}, path::Path, io::{Write, Read}};
+use std::{sync::{RwLock, Arc}, path::Path};
 use okaywal::WriteAheadLog;
-use serde::{Serialize, de::DeserializeOwned};
-use bincode;
 use crate::{
-    common::{store::Field},
+    common::store::Field,
     database::{
         store::{Cell, Store},
         Table, TableReceiver,
@@ -12,7 +10,7 @@ use crate::{
 
 use talk::sync::lenders::AtomicLender;
 
-use super::{store::Label, wal::logging_checkpointer::LoggingCheckpointer};
+use super::wal::logging_checkpointer::LoggingCheckpointer;
 
 /// A datastrucure for memory-efficient storage and transfer of maps with a
 /// large degree of similarity (% of key-pairs in common).
@@ -141,7 +139,7 @@ where
     /// let table = database.empty_table("test");
     /// ```
     pub fn empty_table(&self, name: &str) -> Arc<Table<Key, Value>> {
-        let table = Arc::new(Table::empty(self.store.clone(), name.to_string()));
+        let table = Arc::new(Table::empty(self.store.clone(), name.to_string(), self.log.clone()));
         self.tables.write().unwrap().push(table.clone());
         table
     }
@@ -164,7 +162,7 @@ where
     ///
     /// ```
     pub fn receive(&self) -> TableReceiver<Key, Value> {
-        TableReceiver::new(self.store.clone())
+        TableReceiver::new(self.store.clone(), self.log.clone())
     }
 }
 
@@ -194,7 +192,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use serde::Deserialize;
+    use serde::{Deserialize, Serialize};
 
     use super::*;
 

@@ -12,7 +12,7 @@ use doomstack::{here, Doom, ResultExt, Top};
 
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 
-pub struct TableSender<Key: Field, Value: Field>(Handle<Key, Value>);
+pub struct TableSender<Key: Field, Value: Field>(Handle<Key, Value> );
 
 impl<Key, Value> TableSender<Key, Value>
 where

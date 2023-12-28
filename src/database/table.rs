@@ -10,6 +10,7 @@ use crate::{
 use doomstack::{here, ResultExt, Top};
 
 use oh_snap::Snap;
+use okaywal::WriteAheadLog;
 use std::{borrow::Borrow, collections::{hash_map::Entry::{Occupied, Vacant}, HashMap}, hash::Hash as StdHash};
 
 use talk::crypto::primitives::{hash, hash::Hash};
@@ -42,12 +43,12 @@ where
     Key: Field,
     Value: Field,
 {
-    pub(crate) fn empty(cell: Cell<Key, Value>, name: String) -> Self {
-        Table(Handle::empty(cell), name)
+    pub(crate) fn empty(cell: Cell<Key, Value>, name: String, log: WriteAheadLog) -> Self {
+        Table(Handle::empty(cell, log), name)
     }
 
-    pub(crate) fn new(cell: Cell<Key, Value>, root: Label, name:String) -> Self {
-        Table(Handle::new(cell, root), name)
+    pub(crate) fn new(cell: Cell<Key, Value>, root: Label, name:String, log: WriteAheadLog) -> Self {
+        Table(Handle::new(cell, log, root), name)
     }
 
     pub(crate) fn from_handle(handle: Handle<Key, Value>, name: String) -> Self {
