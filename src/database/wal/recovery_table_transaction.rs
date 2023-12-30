@@ -30,7 +30,7 @@ where
     Key: Field,
     Value: Field,
 {
-    pub fn new() -> Self {
+    pub (crate) fn new() -> Self {
         RecoveryTableTransaction {
             tid: TID.fetch_add(1, Ordering::Relaxed),
             operations: Vec::new(),
@@ -39,7 +39,7 @@ where
     }
 
 
-    pub fn set(&mut self, key: Wrap<Key>, value: Wrap<Value>) -> Result<(), Top<QueryError>> {
+    pub (crate) fn set(&mut self, key: Wrap<Key>, value: Wrap<Value>) -> Result<(), Top<QueryError>> {
         let operation = Operation::recovery_set(key, value).pot(QueryError::HashError, here!())?;
 
         if self.paths.insert(operation.path) {
@@ -50,7 +50,7 @@ where
         }
     }
 
-    pub fn remove(&mut self, key: Wrap<Key>) -> Result<(), Top<QueryError>> {
+    pub (crate) fn remove(&mut self, key: Wrap<Key>) -> Result<(), Top<QueryError>> {
         let operation = Operation::recovery_remove(key).pot(QueryError::HashError, here!())?;
 
         if self.paths.insert(operation.path) {
