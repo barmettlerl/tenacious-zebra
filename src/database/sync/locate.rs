@@ -1,3 +1,5 @@
+use serde::de::DeserializeOwned;
+
 use crate::{
     common::{
         store::Field,
@@ -15,11 +17,11 @@ enum Recursion {
 
 fn get_siblings<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> (u8, (Label, Label))
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     let recursion = match store.entry(label) {
-        Occupied(entry) => match entry.get().node {
+        Some(entry) => match entry.node {
             Node::Internal(Label::Internal(map, hash), _)
             | Node::Internal(_, Label::Internal(map, hash)) => {
                 Recursion::Recur(Label::Internal(map, hash))
@@ -27,7 +29,7 @@ where
             Node::Internal(left, right) => Recursion::Stop(left, right),
             _ => panic!("called `locate` on a non-`Internal` node"),
         },
-        Vacant(..) => unreachable!(),
+        None => unreachable!(),
     };
 
     match recursion {
@@ -41,22 +43,22 @@ where
 
 fn leaf_path<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Path
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     match store.entry(label) {
-        Occupied(entry) => match &entry.get().node {
+        Some(entry) => match &entry.node {
             Node::Leaf(key, _) => Path::from(key.digest()),
             _ => unreachable!(),
         },
-        Vacant(..) => unreachable!(),
+        None => unreachable!(),
     }
 }
 
 pub(crate) fn locate<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Prefix
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     let (dive, (left, right)) = get_siblings(store, label);
     let common = Prefix::common(leaf_path(store, left), leaf_path(store, right));
@@ -76,7 +78,7 @@ mod tests {
     fn tree() {
         use Direction::{Left as L, Right as R};
 
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (mut store, root, _) = apply::apply(store, Label::Empty, batch);
@@ -118,7 +120,7 @@ mod tests {
             }
         }
 
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (mut store, root, _) = apply::apply(store, Label::Empty, batch);

@@ -10,6 +10,7 @@ use crate::{
 };
 
 use doomstack::{here, Doom, ResultExt, Top};
+use serde::de::DeserializeOwned;
 
 use std::collections::{
     hash_map::Entry::{Occupied, Vacant},
@@ -18,7 +19,7 @@ use std::collections::{
 
 const DEFAULT_WINDOW: usize = 128;
 
-pub struct TableReceiver<Key: Field, Value: Field> {
+pub struct TableReceiver<Key: Field + DeserializeOwned, Value: Field + DeserializeOwned> {
     cell: Cell<Key, Value>,
     root: Option<Label>,
     name: String,
@@ -39,8 +40,8 @@ struct Context {
 
 impl<Key, Value> TableReceiver<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     pub(crate) fn new(cell: Cell<Key, Value>) -> Self {
         TableReceiver {
@@ -152,8 +153,8 @@ where
 
         // Check if `label` is already in `store`.
         let hold = match store.entry(label) {
-            Occupied(..) => true,
-            Vacant(..) => false,
+            Some(_) => true,
+            None => false,
         };
 
         if hold {
@@ -208,8 +209,8 @@ where
     fn flush(&mut self, store: &mut Store<Key, Value>, label: Label) {
         if !label.is_empty() {
             let stored = match store.entry(label) {
-                Occupied(..) => true,
-                Vacant(..) => false,
+                Some(_) => true,
+                None => false,
             };
 
             let recursion = if stored {
@@ -240,8 +241,8 @@ where
 
 impl<Key, Value> Drop for TableReceiver<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     fn drop(&mut self) {
         let mut store = self.cell.take();
@@ -256,7 +257,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use serde::{Serialize, Deserialize};
+    use serde::{Serialize, Deserialize, de::DeserializeOwned};
 
     use super::*;
 
@@ -264,8 +265,8 @@ mod tests {
 
     enum Transfer<'a, Key, Value>
     where
-        Key: Field,
-        Value: Field,
+        Key: Field + DeserializeOwned,
+        Value: Field + DeserializeOwned,
     {
         Complete(Table<Key, Value>),
         Incomplete(
@@ -282,8 +283,8 @@ mod tests {
         steps: usize,
     ) -> Transfer<Key, Value>
     where
-        Key: Field,
-        Value: Field,
+        Key: Field + DeserializeOwned,
+        Value: Field + DeserializeOwned,
     {
         for _ in 0..steps {
             let status = receiver.learn(answer).unwrap();
@@ -304,8 +305,8 @@ mod tests {
 
     impl<Key, Value> TableReceiver<Key, Value>
     where
-        Key: Field,
-        Value: Field,
+        Key: Field + DeserializeOwned,
+        Value: Field + DeserializeOwned,
     {
         pub(crate) fn held(&self) -> Vec<Label> {
             self.held.iter().map(|label| *label).collect()
@@ -319,8 +320,8 @@ mod tests {
     ) -> ([Table<Key, Value>; N], usize)
     where
         I: IntoIterator<Item = &'a Table<Key, Value>>,
-        Key: Field + Serialize + Deserialize<'de>,
-        Value: Field + Serialize + Deserialize<'de>,
+        Key: Field + Serialize + DeserializeOwned,
+        Value: Field + Serialize + DeserializeOwned,
     {
         let mut transfers: [Transfer<Key, Value>; N] = array_init::from_iter(
             IntoIterator::into_iter(transfers).map(|(sender, receiver)| {

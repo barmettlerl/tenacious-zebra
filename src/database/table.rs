@@ -10,6 +10,7 @@ use crate::{
 use doomstack::{here, ResultExt, Top};
 
 use oh_snap::Snap;
+use serde::de::DeserializeOwned;
 use std::{borrow::Borrow, collections::{hash_map::Entry::{Occupied, Vacant}, HashMap}, hash::Hash as StdHash};
 
 use talk::crypto::primitives::{hash, hash::Hash};
@@ -35,12 +36,12 @@ use super::store::{Store, Node, Wrap};
 /// [`TableSender`]: crate::database::TableSender
 /// [`TableReceiver`]: crate::database::TableReceiver
 
-pub struct Table<Key: Field, Value: Field>(Handle<Key, Value>, String);
+pub struct Table<Key: Field + DeserializeOwned, Value: Field + DeserializeOwned>(Handle<Key, Value>, String);
 
 impl<Key, Value> Table<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     pub(crate) fn empty(cell: Cell<Key, Value>, name: String) -> Self {
         Table(Handle::empty(cell), name)
@@ -178,7 +179,7 @@ where
 
         for child in [left, right] {
             if child != Label::Empty {
-                if let Vacant(..) = store.entry(child) {
+                if let None = store.entry(child) {
                     panic!("`check_internal`: child not found");
                 }
             }
@@ -194,8 +195,8 @@ where
 
     fn fetch_node(store: &mut Store<Key,Value>, label: Label) -> Node<Key, Value> {
         match store.entry(label) {
-            Occupied(entry) => entry.get().node.clone(),
-            Vacant(..) => panic!("`fetch_node`: node not found"),
+            Some(entry) => entry.node.clone(),
+            None => panic!("`fetch_node`: node not found"),
         }
     }
 
@@ -241,8 +242,8 @@ where
 
 impl<Key, Value> Clone for Table<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     fn clone(&self) -> Self {
         Table(self.0.clone(), self.1.clone())
@@ -260,8 +261,8 @@ mod tests {
 
     impl<Key, Value> Table<Key, Value>
     where
-        Key: Field,
-        Value: Field,
+        Key: Field + DeserializeOwned,
+        Value: Field + DeserializeOwned,
     {
         pub(crate) fn root(&self) -> Label {
             self.0.root.read().unwrap().clone()

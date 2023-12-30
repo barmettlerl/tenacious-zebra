@@ -9,12 +9,13 @@ use crate::{
 };
 
 use doomstack::Top;
+use serde::de::DeserializeOwned;
 
-pub struct CollectionReceiver<Item: Field>(pub(crate) TableReceiver<Item, ()>);
+pub struct CollectionReceiver<Item: Field + DeserializeOwned>(pub(crate) TableReceiver<Item, ()>);
 
 impl<Item> CollectionReceiver<Item>
 where
-    Item: Field,
+    Item: Field + DeserializeOwned,
 {
     pub fn learn(
         self,

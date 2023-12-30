@@ -6,12 +6,13 @@ use crate::{
 };
 
 use doomstack::Top;
+use serde::de::DeserializeOwned;
 
-pub struct CollectionSender<Item: Field>(pub(crate) TableSender<Item, ()>);
+pub struct CollectionSender<Item: Field + DeserializeOwned>(pub(crate) TableSender<Item, ()>);
 
 impl<Item> CollectionSender<Item>
 where
-    Item: Field,
+    Item: Field + DeserializeOwned,
 {
     pub fn hello(&self) -> CollectionAnswer<Item> {
         self.0.hello()

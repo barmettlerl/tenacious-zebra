@@ -1,3 +1,5 @@
+use serde::de::DeserializeOwned;
+
 use crate::{
     common::{
         store::Field,
@@ -48,20 +50,19 @@ where
 
 fn get<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Entry<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     if !label.is_empty() {
         match store.entry(label) {
-            Occupied(entry) => {
-                let value = entry.get();
+            Some(entry) => {
                 Entry {
                     label,
-                    node: value.node.clone(),
-                    references: References::Applicable(value.references),
+                    node: entry.node,
+                    references: References::Applicable(entry.references),
                 }
             }
-            Vacant(..) => unreachable!(),
+            None => unreachable!(),
         }
     } else {
         Entry::empty()
@@ -79,8 +80,8 @@ fn branch<Key, Value>(
     right: Entry<Key, Value>,
 ) -> (Store<Key, Value>, Batch<Key, Value>, Label)
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     let preserve_branches = preserve
         || if let Some(original) = original {
@@ -199,8 +200,8 @@ fn recur<Key, Value>(
     chunk: Chunk,
 ) -> (Store<Key, Value>, Batch<Key, Value>, Label)
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     match (&target.node, chunk.task(&mut batch)) {
         (_, Task::Pass) => (store, batch, target.label),
@@ -287,8 +288,8 @@ pub(crate) fn apply<Key, Value>(
     batch: Batch<Key, Value>,
 ) -> (Store<Key, Value>, Label, Batch<Key, Value>)
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     let root_node = get(&mut store, root);
     let root_chunk = Chunk::root(&batch);
@@ -316,7 +317,7 @@ mod tests {
 
     #[test]
     fn single_static_tree() {
-        let mut store = Store::<u32, u32>::new();
+        let mut store = Store::<u32, u32>::default();
         store.check_leaks([Label::Empty]);
 
         // {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7}
@@ -373,7 +374,7 @@ mod tests {
 
     #[test]
     fn single_dynamic_tree() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         // {0: 1}
 
@@ -436,7 +437,7 @@ mod tests {
 
     #[test]
     fn single_insert() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (mut store, root, _) = apply(store, Label::Empty, batch);
@@ -448,7 +449,7 @@ mod tests {
 
     #[test]
     fn single_insert_read_all() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (store, root, _) = apply(store, Label::Empty, batch);
@@ -461,7 +462,7 @@ mod tests {
 
     #[test]
     fn single_insert_read_half() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (store, root, _) = apply(store, Label::Empty, batch);
@@ -474,7 +475,7 @@ mod tests {
 
     #[test]
     fn single_insert_read_missing() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (store, root, _) = apply(store, Label::Empty, batch);
@@ -487,7 +488,7 @@ mod tests {
 
     #[test]
     fn single_insert_read_overlap() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (store, root, _) = apply(store, Label::Empty, batch);
@@ -500,7 +501,7 @@ mod tests {
 
     #[test]
     fn single_modify() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (store, root, _) = apply(store, Label::Empty, batch);
@@ -515,7 +516,7 @@ mod tests {
 
     #[test]
     fn single_modify_read_overlap() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (store, root, _) = apply(store, Label::Empty, batch);
@@ -531,7 +532,7 @@ mod tests {
 
     #[test]
     fn single_modify_overlap_same_value() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (store, root, _) = apply(store, Label::Empty, batch);
@@ -547,7 +548,7 @@ mod tests {
 
     #[test]
     fn single_insert_hybrid_read_set() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..192).map(|i| set!(i, i)).collect());
         let (store, root, _) = apply(store, Label::Empty, batch);
@@ -570,7 +571,7 @@ mod tests {
 
     #[test]
     fn single_remove_all() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (store, root, _) = apply(store, Label::Empty, batch);
@@ -584,7 +585,7 @@ mod tests {
 
     #[test]
     fn single_remove_half() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (store, root, _) = apply(store, Label::Empty, batch);
@@ -599,7 +600,7 @@ mod tests {
 
     #[test]
     fn single_remove_all_but_one() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (store, root, _) = apply(store, Label::Empty, batch);
@@ -614,7 +615,7 @@ mod tests {
 
     #[test]
     fn single_remove_half_insert_half() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..64).map(|i| set!(i, i)).collect());
         let (store, root, _) = apply(store, Label::Empty, batch);
@@ -633,7 +634,7 @@ mod tests {
 
     #[test]
     fn single_remove_half_modify_half() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (store, root, _) = apply(store, Label::Empty, batch);
@@ -652,7 +653,7 @@ mod tests {
 
     #[test]
     fn single_remove_quarter_modify_quarter_insert_half() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..64).map(|i| set!(i, i)).collect());
         let (store, root, _) = apply(store, Label::Empty, batch);
@@ -673,7 +674,7 @@ mod tests {
     fn single_stress() {
         let mut record_reference = HashMap::new();
 
-        let mut store = Store::<u32, u32>::new();
+        let mut store = Store::<u32, u32>::default();
         let mut root = Label::Empty;
 
         let mut rng = rand::thread_rng();
@@ -717,7 +718,7 @@ mod tests {
 
     #[test]
     fn multiple_distinct() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (store, first_root, _) = apply(store, Label::Empty, batch);
@@ -736,7 +737,7 @@ mod tests {
 
     #[test]
     fn multiple_insert_then_match() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = || Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (store, first_root, _) = apply(store, Label::Empty, batch());
@@ -753,7 +754,7 @@ mod tests {
 
     #[test]
     fn multiple_insert_then_overflow_by_one() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (store, first_root, _) = apply(store, Label::Empty, batch);
@@ -772,7 +773,7 @@ mod tests {
 
     #[test]
     fn multiple_insert_then_double() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (store, first_root, _) = apply(store, Label::Empty, batch);
@@ -791,7 +792,7 @@ mod tests {
 
     #[test]
     fn multiple_match_then_empty() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = || Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (store, first_root, _) = apply(store, Label::Empty, batch());
@@ -811,7 +812,7 @@ mod tests {
 
     #[test]
     fn multiple_match_then_leave_one() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = || Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (store, first_root, _) = apply(store, Label::Empty, batch());
@@ -831,7 +832,7 @@ mod tests {
 
     #[test]
     fn multiple_match_then_leave_half() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = || Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (store, first_root, _) = apply(store, Label::Empty, batch());
@@ -851,7 +852,7 @@ mod tests {
 
     #[test]
     fn multiple_match_then_split() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = || Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (store, first_root, _) = apply(store, Label::Empty, batch());
@@ -877,7 +878,7 @@ mod tests {
         let mut first_record_reference = HashMap::new();
         let mut second_record_reference = HashMap::new();
 
-        let mut store = Store::<u32, u32>::new();
+        let mut store = Store::<u32, u32>::default();
 
         let mut first_root = Label::Empty;
         let mut second_root = Label::Empty;

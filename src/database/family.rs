@@ -1,18 +1,20 @@
 
+use serde::de::DeserializeOwned;
+
 use crate::{
     common::store::Field,
     database::{Collection, CollectionReceiver, Database},
 };
 
 #[derive(Clone)]
-pub struct Family<Item: Field>(pub(crate) Database<Item, ()>);
+pub struct Family<Item: Field + DeserializeOwned>(pub(crate) Database<Item, ()>);
 
 impl<'de, Item> Family<Item>
 where
-    Item: Field,
+    Item: Field + DeserializeOwned,
 {
-    pub fn new() -> Self {
-        Family(Database::new())
+    pub fn new(path: &str) -> Self {
+        Family(Database::new(path))
     }
 
     pub fn empty_collection(&self, name: &str) -> Collection<Item> {

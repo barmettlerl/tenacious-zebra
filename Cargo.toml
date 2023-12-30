@@ -16,6 +16,7 @@ doomstack = { git = "https://github.com/Distributed-EPFL/doomstack" }
 rayon = { version = "1.5.1" }
 bit-vec = { version = "0.6", features = ["serde"] }
 bincode = { version = "1" }
+pickledb = "0.5.1"
 
 [dev-dependencies]
 rand = { version = "0.8.4" }

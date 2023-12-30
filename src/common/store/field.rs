@@ -1,4 +1,4 @@
-use serde::{Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 
 pub trait Field: 'static + Serialize + Send + Sync {}
 

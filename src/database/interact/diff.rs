@@ -1,3 +1,5 @@
+use serde::de::DeserializeOwned;
+
 use crate::{
     common::store::Field,
     database::store::{Label, Node, Split, Store, Wrap},
@@ -10,16 +12,15 @@ use std::collections::{
 
 fn get<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Node<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     if !label.is_empty() {
         match store.entry(label) {
-            Occupied(entry) => {
-                let value = entry.get();
-                value.node.clone()
+            Some(entry) => {
+                entry.node
             }
-            Vacant(..) => unreachable!(),
+            None => unreachable!(),
         }
     } else {
         Node::Empty
@@ -36,8 +37,8 @@ pub(crate) fn branch<Key, Value>(
     LinkedList<(Wrap<Key>, Wrap<Value>)>,
 )
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     let (lho_left, lho_right) = match lho_recursion {
         Some((lho_left, lho_right)) => (Some(lho_left), Some(lho_right)),
@@ -113,8 +114,8 @@ pub(crate) fn recur<Key, Value>(
     LinkedList<(Wrap<Key>, Wrap<Value>)>,
 )
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     if lho_node != rho_node {
         let mut lho_collector = LinkedList::new();
@@ -166,8 +167,8 @@ pub(crate) fn diff<Key, Value>(
     LinkedList<(Wrap<Key>, Wrap<Value>)>,
 )
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     recur(store, Some(lho_root), Some(rho_root))
 }

@@ -3,52 +3,69 @@ use crate::{
     database::store::{Entry, Label, MapId, Node, Split},
 };
 
-use serde::{Serialize, Deserialize};
+use pickledb::{PickleDb, PickleDbDumpPolicy, SerializationMethod};
+use serde::{Serialize, Deserialize, de::DeserializeOwned};
 
 use oh_snap::Snap;
 
 use std::{
     collections::{
-        hash_map::{
-            Entry as HashMapEntry,
-            Entry::{Occupied, Vacant},
-        },
         HashMap,
     },
-    iter,
+    iter, path::Path, sync::{Arc, Mutex},
 };
 
 pub(crate) type EntryMap<Key, Value> = HashMap<Bytes, Entry<Key, Value>>;
-pub(crate) type EntryMapEntry<'a, Key, Value> = HashMapEntry<'a, Bytes, Entry<Key, Value>>;
 
 pub(crate) const DEPTH: u8 = 8;
 
-#[derive(Serialize, Deserialize)]
 pub(crate) struct Store<Key: Field, Value: Field> {
-    maps: Snap<EntryMap<Key, Value>>,
+    maps: Snap<Arc<Mutex<PickleDb>>>,
     scope: Prefix,
+    _phantom: std::marker::PhantomData<(Key, Value)>,
 }
 
 impl<Key, Value> Store<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + Serialize + DeserializeOwned,
+    Value: Field + Serialize + DeserializeOwned,
 {
-    pub fn new() -> Self {
+    pub fn new(path: &Path) -> Self {
+
+        // if path not exists create it
+        if !path.exists() {
+            std::fs::create_dir_all(path).unwrap();
+        }
+
+        let mut curr = 0;
         Store {
             maps: Snap::new(
-                iter::repeat_with(|| EntryMap::new())
+                iter::repeat_with(|| {
+                    curr += 1;
+                    let db = PickleDb::load(path.join(format!("{}.db", curr)), PickleDbDumpPolicy::NeverDump, SerializationMethod::Bin);
+                    if db.is_err() {
+                        Arc::new(Mutex::new(PickleDb::new(path.join(format!("{}.db", curr)), PickleDbDumpPolicy::NeverDump, SerializationMethod::Bin)))
+                    } else {
+                        Arc::new(Mutex::new(db.unwrap()))
+                    }
+                })
                     .take(1 << DEPTH)
                     .collect(),
             ),
             scope: Prefix::root(),
+            _phantom: std::marker::PhantomData,
         }
+    }
+
+    pub fn default() -> Self {
+        Store::new(Path::new("store"))
     }
 
     pub fn merge(left: Self, right: Self) -> Self {
         Store {
             maps: Snap::merge(right.maps, left.maps),
             scope: left.scope.ancestor(1),
+            _phantom: std::marker::PhantomData,
         }
     }
 
@@ -61,11 +78,13 @@ where
             let left = Store {
                 maps: left_maps,
                 scope: self.scope.left(),
+                _phantom: std::marker::PhantomData,
             };
 
             let right = Store {
                 maps: right_maps,
                 scope: self.scope.right(),
+                _phantom: std::marker::PhantomData,
             };
 
             Split::Split(left, right)
@@ -74,18 +93,22 @@ where
         }
     }
 
-
-    pub fn entry(&mut self, label: Label) -> EntryMapEntry<Key, Value> {
+    fn map(&self, label: Label) -> Arc<Mutex<PickleDb>> {
         let map = label.map().id() - self.maps.range().start;
+        self.maps[map].clone()
+    }
+
+    pub fn entry(&mut self, label: Label) -> Option<Entry<Key, Value>> {
         let hash = label.hash();
-        self.maps[map].entry(hash)
+        self.map(label).lock().unwrap().get::<Entry<Key,Value>>(&hash.to_string())
     }
 
 
     #[cfg(test)]
     pub fn size(&self) -> usize {
         debug_assert!(self.maps.is_complete());
-        self.maps.iter().map(|map| map.len()).sum()
+        self.maps.iter()
+        .map(|map| map.lock().unwrap().total_keys()).sum::<usize>()
     }
 
     pub fn label(&self, node: &Node<Key, Value>) -> Label {
@@ -111,15 +134,15 @@ where
     {
         if !label.is_empty() {
             match self.entry(label) {
-                Vacant(entry) => {
-                    entry.insert(Entry {
+                None => {
+                    let entry = Entry {
                         node,
-                        references: 0,
-                    });
-
+                        references: 1,
+                    };
+                    let res = self.map(label).lock().unwrap().set(&label.hash().to_string(), &entry);
                     true
                 }
-                Occupied(..) => false,
+                Some(_) => false,
             }
         } else {
             false
@@ -133,10 +156,14 @@ where
     {
         if !label.is_empty() {
             match self.entry(label) {
-                Occupied(mut entry) => {
-                    entry.get_mut().references += 1;
+                Some(entry) => {
+                    let entry = &Entry {
+                        node: entry.node,
+                        references: entry.references + 1,
+                    };
+                    self.map(label).lock().unwrap().set(&label.hash().to_string(), entry);
                 }
-                Vacant(..) => panic!("called `incref` on non-existing node"),
+                None => panic!("called `incref` on non-existing node"),
             }
         }
     }
@@ -148,18 +175,22 @@ where
     {
         if !label.is_empty() {
             match self.entry(label) {
-                Occupied(mut entry) => {
-                    let value = entry.get_mut();
-                    value.references -= 1;
+                Some(entry) => {
+                    let new_entry = Entry {
+                        node: entry.node.clone(),
+                        references: entry.references - 1,
+                    };
 
-                    if value.references == 0 && !preserve {
-                        let (_, entry) = entry.remove_entry();
+                    if (new_entry.references == 0) && !preserve {
+                        self.map(label).lock().unwrap().rem(&label.hash().to_string()).unwrap();
                         Some(entry.node)
                     } else {
+                        self.map(label).lock().unwrap().set(&label.hash().to_string(), &new_entry);
                         None
                     }
+
                 }
-                Vacant(..) => panic!("called `decref` on non-existing node"),
+                None => panic!("called `decref` on non-existing node"),
             }
         } else {
             None
@@ -181,14 +212,14 @@ mod tests {
 
     impl<Key, Value> Store<Key, Value>
     where
-        Key: Field,
-        Value: Field,
+        Key: Field + DeserializeOwned,
+        Value: Field + DeserializeOwned,
     {
         pub fn raw_leaves<I>(leaves: I) -> (Self, Vec<Label>)
         where
             I: IntoIterator<Item = (Key, Value)>,
         {
-            let mut store = Store::new();
+            let mut store = Store::default();
 
             let labels = leaves
                 .into_iter()
@@ -220,8 +251,8 @@ mod tests {
 
         pub fn fetch_node(&mut self, label: Label) -> Node<Key, Value> {
             match self.entry(label) {
-                Occupied(entry) => entry.get().node.clone(),
-                Vacant(..) => panic!("`fetch_node`: node not found"),
+                Some(entry) => entry.node.clone(),
+                None => panic!("`fetch_node`: node not found"),
             }
         }
 
@@ -267,7 +298,7 @@ mod tests {
 
             for child in [left, right] {
                 if child != Label::Empty {
-                    if let Vacant(..) = self.entry(child) {
+                    if let None = self.entry(child) {
                         panic!("`check_internal`: child not found");
                     }
                 }

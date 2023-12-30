@@ -8,6 +8,7 @@ use crate::{
 };
 
 use oh_snap::Snap;
+use serde::de::DeserializeOwned;
 
 use std::{
     collections::{hash_map::Entry, HashMap},
@@ -17,15 +18,15 @@ use std::{
 
 use talk::crypto::primitives::hash::Hash;
 
-pub(crate) struct Handle<Key: Field, Value: Field> {
+pub(crate) struct Handle<Key: Field + DeserializeOwned, Value: Field + DeserializeOwned> {
     pub cell: Cell<Key, Value>,
     pub root: RwLock<Label>,
 }
 
 impl<Key, Value> Handle<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     pub fn empty(cell: Cell<Key, Value>) -> Self {
         Handle {
@@ -118,8 +119,8 @@ where
 
 impl<Key, Value> Clone for Handle<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     fn clone(&self) -> Self {
         let mut store = self.cell.take();
@@ -135,8 +136,8 @@ where
 
 impl<Key, Value> Drop for Handle<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     fn drop(&mut self) {
         let mut store = self.cell.take();

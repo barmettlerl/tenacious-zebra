@@ -8,21 +8,21 @@ use crate::{
 };
 
 use oh_snap::Snap;
+use serde::de::DeserializeOwned;
 
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 
 fn get<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Node<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     if !label.is_empty() {
         match store.entry(label) {
-            Occupied(entry) => {
-                let value = entry.get();
-                value.node.clone()
+            Some(entry) => {
+                entry.node
             }
-            Vacant(..) => unreachable!(),
+            None => unreachable!(),
         }
     } else {
         Node::Empty
@@ -44,8 +44,8 @@ fn branch<Key, Value>(
     right: Label,
 ) -> (Store<Key, Value>, MapNode<Key, Value>, MapNode<Key, Value>)
 where
-    Key: Field + Clone,
-    Value: Field + Clone,
+    Key: Field + Clone + DeserializeOwned,
+    Value: Field + Clone + DeserializeOwned,
 {
     let (left_paths, right_paths) = split(paths, depth);
 
@@ -75,8 +75,8 @@ fn recur<Key, Value>(
     paths: Snap<Path>,
 ) -> (Store<Key, Value>, MapNode<Key, Value>)
 where
-    Key: Field + Clone,
-    Value: Field + Clone,
+    Key: Field + Clone + DeserializeOwned,
+    Value: Field + Clone + DeserializeOwned,
 {
     let hash = node.hash();
 
@@ -108,8 +108,8 @@ pub(crate) fn export<Key, Value>(
     paths: Snap<Path>,
 ) -> (Store<Key, Value>, MapNode<Key, Value>)
 where
-    Key: Field + Clone,
-    Value: Field + Clone,
+    Key: Field + Clone + DeserializeOwned,
+    Value: Field + Clone + DeserializeOwned,
 {
     recur(store, root, 0, paths)
 }

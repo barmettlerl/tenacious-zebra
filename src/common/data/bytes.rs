@@ -35,3 +35,9 @@ impl Debug for Bytes {
         Ok(())
     }
 }
+
+impl ToString for Bytes {
+    fn to_string(&self) -> String {
+        format!("{:x}", self)
+    }
+}

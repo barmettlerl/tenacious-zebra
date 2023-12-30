@@ -1,3 +1,5 @@
+use serde::de::DeserializeOwned;
+
 use crate::{
     common::store::Field,
     database::store::{Label, Node, Store},
@@ -5,8 +7,8 @@ use crate::{
 
 pub(crate) fn drop<Key, Value>(store: &mut Store<Key, Value>, label: Label)
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     match store.decref(label, false) {
         Some(Node::Internal(left, right)) => {
@@ -27,7 +29,7 @@ mod tests {
 
     #[test]
     fn single() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (mut store, root, _) = apply::apply(store, Label::Empty, batch);
@@ -39,7 +41,7 @@ mod tests {
 
     #[test]
     fn double_independent() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (mut store, first_root, _) = apply::apply(store, Label::Empty, batch);
@@ -58,7 +60,7 @@ mod tests {
 
     #[test]
     fn double_same() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (mut store, first_root, _) = apply::apply(store, Label::Empty, batch);
@@ -77,7 +79,7 @@ mod tests {
 
     #[test]
     fn double_overlap() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::default();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (mut store, first_root, _) = apply::apply(store, Label::Empty, batch);
@@ -99,7 +101,7 @@ mod tests {
         let mut rng = rand::thread_rng();
         let mut roots: Vec<Label> = Vec::new();
 
-        let mut store = Store::<u32, u32>::new();
+        let mut store = Store::<u32, u32>::default();
 
         for _ in 0..32 {
             if rng.gen::<bool>() {

@@ -84,8 +84,8 @@ use super::store::Label;
 
 pub struct Database<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     pub(crate) store: Cell<Key, Value>,
     pub(crate) tables: RwLock<Vec<Arc<Table<Key, Value>>>>,
@@ -93,8 +93,8 @@ where
 
 impl<Key, Value> Database<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     /// Creates an empty `Database`.
     ///
@@ -104,9 +104,9 @@ where
     /// use tenaciouszebra::database::{Database, TableTransaction};
     /// let mut database: Database<String, i32> = Database::new();
     /// ```
-    pub fn new() -> Self {
+    pub fn new(path: &str) -> Self {
         Database {
-            store: Cell::new(AtomicLender::new(Store::new())),
+            store: Cell::new(AtomicLender::new(Store::new(Path::new(path)))),
             tables: RwLock::new(Vec::new()),
         }
     }
@@ -166,119 +166,18 @@ where
 
 impl<Key, Value> Default for Database<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     fn default() -> Self {
-        Self::new()
+        Self::new("db")
     }
-}
-
-impl<Key, Value> Database<Key, Value>
-    where
-        Key: Field + Serialize + DeserializeOwned,
-        Value: Field + Serialize + DeserializeOwned,
-    {
-
-    /// Creates a backup of the database in the specified folder.
-    /// 
-    /// # Examples
-    /// 
-    /// ```
-    ///
-    /// use tenaciouszebra::database::{Database, TableTransaction};
-    /// let database = Database::new();
-    /// 
-    /// let mut modify = TableTransaction::new();
-    /// modify.set("Alice".to_string(), 42).unwrap();
-    /// 
-    /// 
-    /// let table = database.empty_table("test");
-    /// let _ = table.execute(modify);
-    /// 
-    /// database.backup("./backup");
-    /// 
-    /// let new_database = Database::<String, i32>::restore("./backup");
-    /// 
-    /// let new_table = new_database.get_table("test").unwrap();
-    /// 
-    /// let mut read = TableTransaction::new();
-    /// let query_key = read.get(&"Alice".to_string()).unwrap();
-    /// let response = new_table.execute(read);
-    /// ```
-    pub fn backup(&self, folder_path: &str){
-        
-        if !Path::new(folder_path).exists() {
-            std::fs::create_dir(folder_path).unwrap();
-        }
-
-        let mut file = std::fs::File::create(format!("{}/store", folder_path)).unwrap();
-        let store = self.store.take();
-        let store_str = bincode::serialize(&store).unwrap();
-        self.store.restore(store);
-
-        file.write_all(&store_str).unwrap();
-        
-        let mut file = std::fs::File::create(format!("{}/tables", folder_path)).unwrap();
-        let tables = self.tables.write().unwrap();
-        let labels: Vec<(String, Label)> = tables.to_vec().iter().map(|e| {(e.get_name(), e.get_root())}).collect();
-        let tables_str = bincode::serialize(&labels).unwrap();
-        file.write_all(&tables_str).unwrap();
-    }
-
-    /// Restores a database from a backup.
-    /// 
-    /// # Examples
-    /// 
-    /// ```
-    ///
-    /// use tenaciouszebra::database::{Database, TableTransaction};
-    /// let database = Database::new();
-    /// 
-    /// let mut modify = TableTransaction::new();
-    /// modify.set("Alice".to_string(), 42).unwrap();
-    /// 
-    /// 
-    /// let table = database.empty_table("test");
-    /// let _ = table.execute(modify);
-    /// 
-    /// database.backup("./backup");
-    /// 
-    /// let new_database = Database::<String, i32>::restore("./backup");
-    /// 
-    /// let new_table = new_database.get_table("test").unwrap();
-    /// 
-    /// let mut read = TableTransaction::new();
-    /// let query_key = read.get(&"Alice".to_string()).unwrap();
-    /// let response = new_table.execute(read);
-    /// ```
-    pub fn restore(folder_path: &str) -> Self{
-        let mut file = std::fs::File::open(format!("{}/store", folder_path)).unwrap();
-        
-        let mut store_str = Vec::<u8>::new();
-        file.read_to_end(&mut store_str).unwrap();
-        let store: Store<Key, Value> = bincode::deserialize(&store_str).unwrap();
-        let database = Database::from_store(store);
-
-        let mut file = std::fs::File::open(format!("{}/tables", folder_path)).unwrap();
-        let mut tables_str = Vec::<u8>::new();
-        file.read_to_end(&mut tables_str).unwrap();
-        let labels: Vec<(String, Label)> = bincode::deserialize(&tables_str).unwrap();
-        labels.iter().for_each(|e| {
-            database.add_table(Arc::new(Table::new(database.store.clone(), e.1, e.0.clone())))
-        });
-
-        database.tables.read().unwrap().iter().for_each(|e| e.check());
-
-        database
-    }
-    
 }
 
 impl<Key, Value> Clone for Database<Key, Value>
 where
-    Key: Field,
-    Value: Field,
+    Key: Field + DeserializeOwned,
+    Value: Field + DeserializeOwned,
 {
     fn clone(&self) -> Self {
         Database {
@@ -298,8 +197,8 @@ mod tests {
 
     impl<'de, Key, Value> Database<Key, Value>
     where
-        Key: Field + Serialize + Deserialize<'de>,
-        Value: Field + Serialize + Deserialize<'de>,
+        Key: Field + Serialize + DeserializeOwned,
+        Value: Field + Serialize + DeserializeOwned,
     {
         pub(crate) fn table_with_records<I>(&self, records: I) -> Arc<Table<Key, Value>>
         where
@@ -320,8 +219,8 @@ mod tests {
         where
             I: IntoIterator<Item = &'a Table<Key, Value>>,
             J: IntoIterator<Item = &'a TableReceiver<Key, Value>>,
-            Key: Field + Deserialize<'de>,
-            Value: Field + Deserialize<'de>,
+            Key: Field + DeserializeOwned,
+            Value: Field + DeserializeOwned,
         {
             let tables: Vec<&'a Table<Key, Value>> = tables.into_iter().collect();
 

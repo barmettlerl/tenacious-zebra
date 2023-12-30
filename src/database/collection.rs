@@ -5,13 +5,14 @@ use crate::{
 
 use std::{collections::HashSet, hash::Hash as StdHash, sync::Arc};
 
+use serde::de::DeserializeOwned;
 use talk::crypto::primitives::hash::Hash;
 
-pub struct Collection<Item: Field>(pub(crate) Arc<Table<Item, ()>>);
+pub struct Collection<Item: Field + DeserializeOwned>(pub(crate) Arc<Table<Item, ()>>);
 
 impl<Item> Collection<Item>
 where
-    Item: Field,
+    Item: Field + DeserializeOwned,
 {
     pub fn commit(&self) -> Hash {
         self.0.commit()
@@ -52,7 +53,7 @@ where
 
 impl<Item> Clone for Collection<Item>
 where
-    Item: Field,
+    Item: Field + DeserializeOwned,
 {
     fn clone(&self) -> Self {
         Collection(self.0.clone())
