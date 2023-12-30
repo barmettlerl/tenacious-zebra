@@ -99,7 +99,7 @@ where
         // compliance of the combination of the WAL and the storage layer, the
         // storage layer must be fully resilliant to losing any changes made by
         // the checkpointed entries before this function returns.
-        println!("LoggingCheckpointer::checkpoint_to({last_checkpointed_id:?}");
+        // println!("LoggingCheckpointer::checkpoint_to({last_checkpointed_id:?}");
         Ok(())
     }
 }
