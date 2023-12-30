@@ -16,7 +16,7 @@ doomstack = { git = "https://github.com/Distributed-EPFL/doomstack" }
 rayon = { version = "1.5.1" }
 bit-vec = { version = "0.6", features = ["serde"] }
 bincode = { version = "1" }
-okaywal = { git= "https://github.com/barmettlerl/okaywal-zebra.git" }
+okaywal = "0.3.1"
 
 [dev-dependencies]
 rand = { version = "0.8.4" }
