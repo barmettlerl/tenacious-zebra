@@ -19,7 +19,7 @@ pub(crate) type Tid = usize;
 
 static TID: AtomicUsize = AtomicUsize::new(0);
 
-pub struct RecoveryTableTransaction<Key: Field, Value: Field> {
+pub(crate) struct RecoveryTableTransaction<Key: Field, Value: Field> {
     tid: Tid,
     operations: Vec<Operation<Key, Value>>,
     paths: HashSet<Path>,
