@@ -1,5 +1,5 @@
 use std::{sync::{RwLock, Arc}, path::Path};
-use okaywal::{WriteAheadLog, Configuration};
+use okaywal::WriteAheadLog;
 use crate::{
     common::store::Field,
     database::{
@@ -108,10 +108,8 @@ where
         let store = Cell::new(AtomicLender::new(Store::<Key, Value>::new()));
         let tables = Arc::new(RwLock::new(Vec::new()));
 
-        let config = Configuration::default_for(log_path)
-        .preallocate_bytes((2^20) * 100);
         Database {
-            log: config.open(LoggingCheckpointer::<Key, Value>::new(store.clone(), tables.clone())).unwrap(),
+            log: WriteAheadLog::recover(Path::new(log_path), LoggingCheckpointer::<Key, Value>::new(store.clone(), tables.clone())).unwrap(),
             store,
             tables,
         }
@@ -120,10 +118,8 @@ where
     pub(crate) fn from_store(store: Store<Key, Value>, log_path: &str) -> Self {
         let store = Cell::new(AtomicLender::new(store));
         let tables = Arc::new(RwLock::new(Vec::new()));
-        let config = Configuration::default_for(log_path)
-        .preallocate_bytes((2^20) * 100);
         Database {
-            log: config.open(LoggingCheckpointer::<Key, Value>::new(store.clone(), tables.clone())).unwrap(),
+            log: WriteAheadLog::recover(log_path, LoggingCheckpointer::<Key, Value>::new(store.clone(), tables.clone())).unwrap(),
             store,
             tables,
         }
