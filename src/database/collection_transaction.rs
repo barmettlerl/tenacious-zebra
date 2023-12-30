@@ -23,7 +23,7 @@ where
         self.0.set(item, ())
     }
 
-    pub fn remove(&mut self, item: &Item) -> Result<(), Top<QueryError>> {
+    pub fn remove(&mut self, item: Item) -> Result<(), Top<QueryError>> {
         self.0.remove(item)
     }
 }

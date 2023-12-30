@@ -6,7 +6,7 @@ use std::sync::Arc;
 pub(crate) enum Action<Key: Field, Value: Field> {
     Get(Option<Arc<Value>>),
     Set(Wrap<Key>, Wrap<Value>),
-    Remove,
+    Remove(Wrap<Key>),
 }
 
 impl<Key, Value> PartialEq for Action<Key, Value>
@@ -20,7 +20,7 @@ where
             (Action::Set(self_key, self_value), Action::Set(rho_key, rho_value)) => {
                 self_key == rho_key && self_value == rho_value
             }
-            (Action::Remove, Action::Remove) => true,
+            (Action::Remove(self_key), Action::Remove(rho_key)) => self_key == rho_key,
             _ => false,
         }
     }

@@ -37,12 +37,27 @@ where
         })
     }
 
-    pub fn remove(key: &Key) -> Result<Self, Top<HashError>> {
-        let hash: Bytes = hash::hash(key)?.into();
+    pub (crate) fn recovery_set(key: Wrap<Key>, value: Wrap<Value>) -> Result<Self, Top<HashError>> {
+        Ok(Operation {
+            path: Path::from(key.digest()),
+            action: Action::Set(key, value),
+        })
+    }
+
+    pub fn remove(key: Key) -> Result<Self, Top<HashError>> {
+        let hash: Bytes = hash::hash(&key)?.into();
+        let key = Wrap::new(key)?;
 
         Ok(Operation {
             path: Path::from(hash),
-            action: Action::Remove,
+            action: Action::Remove(key),
+        })
+    }
+
+    pub (crate) fn recovery_remove(key: Wrap<Key>) -> Result<Self, Top<HashError>> {
+        Ok(Operation {
+            path: Path::from(key.digest()),
+            action: Action::Remove(key),
         })
     }
 }
@@ -85,6 +100,6 @@ mod tests {
 
         let remove = remove!(0u32);
         assert_eq!(remove.path, set.path);
-        assert_eq!(remove.action, Action::<u32, u32>::Remove);
+        assert_eq!(remove.action, Action::<u32, u32>::Remove(wrap!(0u32)));
     }
 }

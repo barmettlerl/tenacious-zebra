@@ -19,7 +19,7 @@ use talk::crypto::primitives::{hash, hash::Hash};
 #[allow(unused_imports)]
 use crate::database::{Database, TableReceiver};
 
-use super::{store::{Store, Node, Wrap}, interact::Operation, wal::write_log};
+use super::{store::{Store, Node, Wrap}, wal::{write_log, recovery_table_transaction::RecoveryTableTransaction}};
 
 /// A map implemented using Merkle Patricia Trees.
 ///
@@ -44,16 +44,20 @@ where
     Key: Field,
     Value: Field,
 {
-    pub(crate) fn empty(cell: Cell<Key, Value>, name: String, log: WriteAheadLog) -> Self {
+    pub(crate) fn empty(cell: Cell<Key, Value>, name: String, log: Option<WriteAheadLog>) -> Self {
         Table(Handle::empty(cell, log), name)
     }
 
-    pub(crate) fn new(cell: Cell<Key, Value>, root: Label, name:String, log: WriteAheadLog) -> Self {
+    pub(crate) fn new(cell: Cell<Key, Value>, root: Label, name:String, log: Option<WriteAheadLog>) -> Self {
         Table(Handle::new(cell, log, root), name)
     }
 
     pub(crate) fn from_handle(handle: Handle<Key, Value>, name: String) -> Self {
         Table(handle, name)
+    }
+
+    pub(crate) fn add_log_to_table(&mut self, log: WriteAheadLog) {
+        self.0.log = Some(log);
     }
 
     /// Returns a cryptographic commitment to the contents of the `Table`.
@@ -108,8 +112,22 @@ where
     ) -> TableResponse<Key, Value> {
 
         let (tid, batch) = transaction.finalize();
-        write_log::write_log(&self.0.log, &batch);
+        if let Some(log) = &self.0.log {
+            write_log::write_log(log, &batch, self.1.to_string());
+        } else {
+            panic!("`execute`: Table has no log");
+        }
 
+        let batch = self.0.apply(batch);
+        TableResponse::new(tid, batch)
+    }
+
+    pub (crate) fn recover(
+        &self,
+        transaction: RecoveryTableTransaction<Key, Value>,
+    ) -> TableResponse<Key, Value> {
+
+        let (tid, batch) = transaction.finalize();
         let batch = self.0.apply(batch);
         TableResponse::new(tid, batch)
     }

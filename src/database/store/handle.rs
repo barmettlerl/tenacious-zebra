@@ -20,7 +20,7 @@ use talk::crypto::primitives::hash::Hash;
 
 #[derive(Debug)]
 pub(crate) struct Handle<Key: Field, Value: Field> {
-    pub log: WriteAheadLog,
+    pub log: Option<WriteAheadLog>,
     pub cell: Cell<Key, Value>,
     pub root: RwLock<Label>,
 }
@@ -30,7 +30,7 @@ where
     Key: Field,
     Value: Field,
 {
-    pub fn empty(cell: Cell<Key, Value>, log: WriteAheadLog) -> Self {
+    pub fn empty(cell: Cell<Key, Value>, log: Option<WriteAheadLog>) -> Self {
         Handle {
             log,
             cell,
@@ -38,7 +38,7 @@ where
         }
     }
 
-    pub fn new(cell: Cell<Key, Value>, log: WriteAheadLog, root: Label) -> Self {
+    pub fn new(cell: Cell<Key, Value>, log: Option<WriteAheadLog>, root: Label) -> Self {
         Handle { cell, log, root: RwLock::new(root) }
     }
 

@@ -128,8 +128,18 @@ where
         self.tables.write().unwrap().push(table);
     }
 
+    /// Returns the table with the given name if it exists.
+    /// Otherwise, returns `None`.
+    /// It adds the log to the table, such that the backup can be made
     pub fn get_table(&self, name: &str) -> Option<Table<Key, Value>> {
-        self.tables.read().unwrap().iter().find(|e| e.get_name() == name).cloned()
+        let table = self.tables.read().unwrap().iter().find(|e| e.get_name() == name).cloned();
+        if table.is_some() {
+            let mut table = table.unwrap();
+            table.add_log_to_table(self.log.clone());
+            Some(table)
+        } else {
+            None
+        }
     }
 
     /// Creates and assigns an empty [`Table`] to the `Database`.
@@ -143,7 +153,7 @@ where
     /// let table = database.empty_table("test");
     /// ```
     pub fn empty_table(&self, name: &str) -> Table<Key, Value> {
-        let table = Table::empty(self.store.clone(), name.to_string(), self.log.clone());
+        let table = Table::empty(self.store.clone(), name.to_string(), Some(self.log.clone()));
         self.tables.write().unwrap().push(table.clone());
         table
     }

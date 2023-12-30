@@ -214,7 +214,7 @@ where
                 store.populate(label, node);
                 (store, batch, label)
             }
-            Action::Remove => (store, batch, Label::Empty),
+            Action::Remove(_) => (store, batch, Label::Empty),
         },
         (Node::Empty, Task::Split) => branch(
             store,
@@ -243,7 +243,7 @@ where
                     (store, batch, label)
                 }
                 Action::Set(..) => (store, batch, target.label),
-                Action::Remove => (store, batch, Label::Empty),
+                Action::Remove(_) => (store, batch, Label::Empty),
             }
         }
         (
