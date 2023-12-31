@@ -106,7 +106,7 @@ where
     /// ```
     pub fn new() -> Self {
         Database {
-            store: Cell::new(AtomicLender::new(Store::new())),
+            store: Cell::new(AtomicLender::new(Store::default())),
             tables: RwLock::new(Vec::new()),
         }
     }
@@ -312,7 +312,6 @@ mod tests {
                 transaction.set(key, value).unwrap();
             }
 
-            println!("execute");
             let res = table.execute(transaction);
             println!("res {}", res);
             println!("finished2");
@@ -400,16 +399,12 @@ mod tests {
 
     #[test]
     fn test_if_database_sees_changes_made_on_table() {
-        println!("hello world");
 
         let database: Database<u32, u32> = Database::new();
 
         let table = database.table_with_records((0..256).map(|i| (i, i)));
         {
             let tables = database.tables.read().unwrap();
-            println!("{:?}", tables[0].root());
-            println!("{:?}", table.root());
-
             assert_eq!(tables[0].root(), table.root())
         }
 

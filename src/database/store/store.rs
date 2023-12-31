@@ -3,10 +3,11 @@ use crate::{
     database::store::{Entry, Label, MapId, Node, Split},
 };
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use oh_snap::Snap;
 
+use rocksdb::{DBWithThreadMode, MergeOperands, MultiThreaded, Options, DB};
 use std::{
     collections::{
         hash_map::{
@@ -15,50 +16,49 @@ use std::{
         },
         HashMap,
     },
-    iter, fmt::Display,
+    fmt::Display,
+    iter,
+    sync::Arc,
 };
-use rocksdb::{DB, Options, MergeOperands};
 
-pub(crate) type EntryMap = DB;
+pub(crate) type EntryMap = DBWithThreadMode<MultiThreaded>;
 pub(crate) type EntryMapEntry<Key, Value> = Option<(Bytes, Entry<Key, Value>)>;
 
 pub(crate) const DEPTH: u8 = 8;
-pub(crate) const PATH: &str = "db_backup";
 
-pub(crate) struct Store<Key: Field, Value: Field>{
-    maps: Snap<EntryMap>,
+pub(crate) struct Store<Key: Field, Value: Field> {
+    db: Arc<EntryMap>,
     scope: Prefix,
     phantom: std::marker::PhantomData<(Key, Value)>,
 }
-
 
 impl<Key, Value> Store<Key, Value>
 where
     Key: Field + Display,
     Value: Field + Display,
-{    
-    pub fn new() -> Self {
+{
+    pub fn new(path: &str) -> Self {
         let mut opts = Options::default();
-        opts.set_merge_operator_associative("merge_reference_counter", Self::merge_reference_counter);
+        opts.set_merge_operator_associative(
+            "merge_reference_counter",
+            Self::merge_reference_counter,
+        );
         opts.create_if_missing(true);
-        opts.set_max_open_files(40960);
-        println!("Depth: {}", 1 << DEPTH);
+
         let res = Store {
-            maps: Snap::new(
-                (0.. (1 << DEPTH)).map(|id| DB::open(&opts, format!("{}/{}", PATH, id), ))
-                .map(|db| db.unwrap()).collect(),
-            ),
+            db: Arc::new(EntryMap::open(&opts, path).unwrap()),
             scope: Prefix::root(),
             phantom: std::marker::PhantomData,
         };
+        res
+    }
 
-        println!("res: {}", res.maps.len());
-
-        res 
+    pub fn default() -> Self {
+        Self::new("db")
     }
 
     #[cfg(test)]
-    fn get_write_option () -> rocksdb::WriteOptions {
+    fn get_write_option() -> rocksdb::WriteOptions {
         let mut write_options = rocksdb::WriteOptions::default();
         write_options.disable_wal(true);
         write_options
@@ -71,19 +71,27 @@ where
         write_options
     }
 
-    fn merge_reference_counter(_: &[u8], existing_val: Option<&[u8]>, operands: &MergeOperands) -> Option<Vec<u8>>{
+    fn merge_reference_counter(
+        _: &[u8],
+        existing_val: Option<&[u8]>,
+        operands: &MergeOperands,
+    ) -> Option<Vec<u8>> {
 
         existing_val?;
 
-        let mut existing_val: Entry<Key, Value> = bincode::deserialize::<Entry<Key, Value>>(existing_val.unwrap()).unwrap();
-        let operands = operands.into_iter().map(|operand| {
-            let operand: Entry<Key, Value> = bincode::deserialize::<Entry<Key, Value>>(operand).unwrap();
+        let mut existing_val: Entry<Key, Value> =
+            bincode::deserialize::<Entry<Key, Value>>(existing_val.unwrap()).unwrap();
+
+            let operands = operands.into_iter().map(|operand| {
+            let operand: Entry<Key, Value> =
+                bincode::deserialize::<Entry<Key, Value>>(operand).unwrap();
             operand
         });
 
         for operand in operands {
             existing_val.references += operand.references;
         }
+
 
         if existing_val.references <= 0 {
             return None;
@@ -93,11 +101,11 @@ where
             Ok(val) => Some(val),
             Err(e) => panic!("Error while serializing: {}", e),
         }
-}
+    }
 
     pub fn merge(left: Self, right: Self) -> Self {
         Store {
-            maps: Snap::merge(right.maps, left.maps),
+            db: left.db,
             scope: left.scope.ancestor(1),
             phantom: std::marker::PhantomData,
         }
@@ -105,17 +113,14 @@ where
 
     pub fn split(self) -> Split<Key, Value> {
         if self.scope.depth() < DEPTH {
-            let mid = 1 << (DEPTH - self.scope.depth() - 1);
-            let (right_maps, left_maps) = self.maps.snap(mid); // `oh-snap` stores the lowest-index elements in `left`, while `zebra` stores them in `right`, hence the swap
-
             let left = Store {
-                maps: left_maps,
+                db: self.db.clone(),
                 scope: self.scope.left(),
                 phantom: std::marker::PhantomData,
             };
 
             let right = Store {
-                maps: right_maps,
+                db: self.db.clone(),
                 scope: self.scope.right(),
                 phantom: std::marker::PhantomData,
             };
@@ -126,12 +131,10 @@ where
         }
     }
 
-
     pub fn entry(&mut self, label: Label) -> EntryMapEntry<Key, Value> {
-        let map = label.map().id() - self.maps.range().start;
         let hash = label.hash();
 
-        match self.maps[map].get(hash) {
+        match self.db.get(hash) {
             Ok(Some(entry)) => {
                 let entry = bincode::deserialize::<Entry<Key, Value>>(&entry).unwrap();
                 Some((hash, entry))
@@ -139,9 +142,7 @@ where
             Ok(None) => None,
             Err(e) => panic!("Error while reading from database: {}", e),
         }
-        
     }
-
 
     // #[cfg(test)]
     // pub fn size(&self) -> usize {
@@ -165,10 +166,6 @@ where
         }
     }
 
-    fn get_map_id(&self, label: Label) -> usize {
-        label.map().id() - self.maps.range().start
-    }
-
     pub fn populate(&mut self, label: Label, node: Node<Key, Value>) -> bool
     where
         Key: Field,
@@ -177,13 +174,14 @@ where
         if !label.is_empty() {
             match self.entry(label) {
                 None => {
-                    let map = self.get_map_id(label);
                     let entry = Entry {
                         node,
                         references: 0,
                     };
-                    let entry = bincode::serialize(&entry).unwrap();
-                    self.maps[map].put_opt(label.hash(), entry, &Self::get_write_option()).unwrap();
+                    let entry: Vec<u8> = bincode::serialize(&entry).unwrap();
+                    self.db
+                        .put_opt(label.hash(), entry, &Self::get_write_option())
+                        .unwrap();
                     true
                 }
                 Some(..) => false,
@@ -199,10 +197,17 @@ where
         Value: Field,
     {
         if !label.is_empty() {
-            self.maps[self.get_map_id(label)].merge_opt(label.hash(), bincode::serialize(&Entry {
-                node: Node::<Key, Value>::Empty,
-                references: 1,
-            }).unwrap(), &Self::get_write_option()).unwrap();
+            self.db
+                .merge_opt(
+                    label.hash(),
+                    bincode::serialize(&Entry {
+                        node: Node::<Key, Value>::Empty,
+                        references: 1,
+                    })
+                    .unwrap(),
+                    &Self::get_write_option(),
+                )
+                .unwrap();
         }
     }
 
@@ -217,33 +222,38 @@ where
 
         let entry = self.entry(label).unwrap();
 
-        let new_reference = entry.1.references - 1;
-
         let new_entry = Entry {
             node: entry.1.node,
-            references: new_reference,
+            references: entry.1.references - 1,
         };
 
-        // If we are perserve true and the reference count is 0, we want to keep the 
+        let new_entry_bin: Vec<u8> = bincode::serialize(&new_entry).unwrap();
+
+        // If we are perserve true and the reference count is 0, we want to keep the
         // entry in the database even though it is not referenced by any other node.
-        if preserve && new_reference <= 0 {
-            return match self.maps[self.get_map_id(label)].put_opt(label.hash(), bincode::serialize(&new_entry).unwrap(), &Self::get_write_option()) {
+        if preserve && new_entry.references <= 0 {
+            match self
+                .db
+                .put_opt(label.hash(), new_entry_bin, &Self::get_write_option())
+            {
+                Ok(..) => Some(new_entry.node),
+                _ => None,
+            }
+        } else if new_entry.references <= 0 {
+            match self.db.delete_opt(label.hash(), &Self::get_write_option()) {
+                Ok(..) => Some(new_entry.node),
+                _ => None,
+            }
+        } else {
+            match self
+                .db
+                .put_opt(label.hash(), new_entry_bin, &Self::get_write_option())
+            {
                 Ok(..) => Some(new_entry.node),
                 _ => None,
             }
         }
-
-        match self.maps[self.get_map_id(label)].merge_opt(label.hash(), bincode::serialize(&Entry{
-            node: Node::<Key, Value>::Empty,
-            references: -1,
-        }).unwrap(), &Self::get_write_option()) {
-            Ok(..) => Some(new_entry.node),
-            _ => None,
-        }
     }
-
-
-
 }
 
 #[cfg(test)]
@@ -252,7 +262,10 @@ mod tests {
 
     use crate::{
         common::tree::{Direction, Path},
-        database::{store::{Node, Wrap}, interact::{Batch, apply}},
+        database::{
+            interact::{apply, Batch},
+            store::{Node, Wrap},
+        },
     };
 
     use std::{collections::HashSet, fmt::Debug, hash::Hash};
@@ -266,7 +279,7 @@ mod tests {
         where
             I: IntoIterator<Item = (Key, Value)>,
         {
-            let mut store = Store::new();
+            let mut store = Store::default();
 
             let labels = leaves
                 .into_iter()
@@ -401,7 +414,6 @@ mod tests {
             recursion(self, root, &mut collector);
             collector
         }
-
 
         pub fn check_leaks<I>(&mut self, held: I)
         where
@@ -559,7 +571,7 @@ mod tests {
 
             match store.entry(label) {
                 Some(..) => {}
-                None => unreachable!()
+                None => unreachable!(),
             }
         }
     }
@@ -598,7 +610,7 @@ mod tests {
                     }
                     _ => unreachable!(),
                 },
-                None => unreachable!()
+                None => unreachable!(),
             }
         }
     }
@@ -613,5 +625,4 @@ mod tests {
 
     //     assert_eq!(store.size(), 9);
     // }
-
 }

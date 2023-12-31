@@ -107,8 +107,6 @@ where
         let (tid, batch) = transaction.finalize();
         let batch = self.0.apply(batch);
         let res = TableResponse::new(tid, batch);
-        println!("{}: {}", self.1, res);
-        println!("hi");
         res
     }
 
@@ -350,7 +348,6 @@ mod tests {
         table.execute(transaction);
 
         let map = table.export(0..512).unwrap();
-        println!("{:?}", map);
 
         map.check_tree();
         map.assert_records((0..512).map(|i| (i, i)));

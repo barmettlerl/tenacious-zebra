@@ -82,7 +82,6 @@ where
     Key: Field + Display,
     Value: Field + Display,
 {
-    println!("branch");
     let preserve_branches = preserve
         || if let Some(original) = original {
             original.references.multiple()
@@ -204,10 +203,7 @@ where
     Key: Field + Display,
     Value: Field + Display,
 {
-    println!("recur");
-    println!("target: {}", target.node);
-    println!("depth: {}", batch);
-    println!("chunk.task: {}", chunk.task(&mut batch));
+
     match (&target.node, chunk.task(&mut batch)) {
         (_, Task::Pass) => (store, batch, target.label),
 
@@ -443,7 +439,6 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
-        println!("{}", batch);
         let (mut store, root, _) = apply(store, Label::Empty, batch);
 
         store.check_tree(root);
