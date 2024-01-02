@@ -8,12 +8,9 @@ where
     Key: Field,
     Value: Field,
 {
-    match store.decref(label, false) {
-        Some(Node::Internal(left, right)) => {
+    if let Some(Node::Internal(left, right)) = store.decref(label, false) {
             drop(store, left);
             drop(store, right);
-        }
-        _ => (),
     }
 }
 
@@ -27,7 +24,7 @@ mod tests {
 
     #[test]
     fn single() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::new("test");
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (mut store, root, _) = apply::apply(store, Label::Empty, batch);
@@ -39,7 +36,7 @@ mod tests {
 
     #[test]
     fn double_independent() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::new("test");
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (mut store, first_root, _) = apply::apply(store, Label::Empty, batch);
@@ -58,7 +55,7 @@ mod tests {
 
     #[test]
     fn double_same() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::new("test");
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (mut store, first_root, _) = apply::apply(store, Label::Empty, batch);
@@ -77,7 +74,7 @@ mod tests {
 
     #[test]
     fn double_overlap() {
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::new("test");
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (mut store, first_root, _) = apply::apply(store, Label::Empty, batch);
@@ -99,7 +96,7 @@ mod tests {
         let mut rng = rand::thread_rng();
         let mut roots: Vec<Label> = Vec::new();
 
-        let mut store = Store::<u32, u32>::new();
+        let mut store = Store::<u32, u32>::new("test");
 
         for _ in 0..32 {
             if rng.gen::<bool>() {

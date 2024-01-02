@@ -76,7 +76,7 @@ mod tests {
     fn tree() {
         use Direction::{Left as L, Right as R};
 
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::new("test");
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (mut store, root, _) = apply::apply(store, Label::Empty, batch);
@@ -118,7 +118,7 @@ mod tests {
             }
         }
 
-        let store = Store::<u32, u32>::new();
+        let store = Store::<u32, u32>::new("test");
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (mut store, root, _) = apply::apply(store, Label::Empty, batch);

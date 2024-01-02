@@ -6,6 +6,7 @@ use rayon::prelude::*;
 
 use std::vec::Vec;
 
+#[derive(Debug)]
 pub(crate) struct Batch<Key: Field, Value: Field> {
     operations: Snap<Operation<Key, Value>>,
 }

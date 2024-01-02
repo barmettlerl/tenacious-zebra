@@ -19,6 +19,7 @@ pub(crate) type Tid = usize;
 
 static TID: AtomicUsize = AtomicUsize::new(0);
 
+#[derive(Debug)]
 pub struct TableTransaction<Key: Field, Value: Field> {
     tid: Tid,
     operations: Vec<Operation<Key, Value>>,
@@ -38,7 +39,7 @@ where
         }
     }
 
-    pub fn get(&mut self, key: &Key) -> Result<Query, Top<QueryError>> {
+    pub fn get(&mut self, key: Key) -> Result<Query, Top<QueryError>> {
         let operation = Operation::<Key, Value>::get(key).pot(QueryError::HashError, here!())?;
 
         if self.paths.insert(operation.path) {
@@ -65,7 +66,7 @@ where
         }
     }
 
-    pub fn remove(&mut self, key: &Key) -> Result<(), Top<QueryError>> {
+    pub fn remove(&mut self, key: Key) -> Result<(), Top<QueryError>> {
         let operation = Operation::remove(key).pot(QueryError::HashError, here!())?;
 
         if self.paths.insert(operation.path) {

@@ -1,9 +1,13 @@
 use crate::{
     common::{data::Bytes, store::Field, tree::Prefix},
-    database::store::{Entry, Label, MapId, Node, Split},
+    database::{
+        interact::{Action, Batch},
+        store::{Entry, Label, MapId, Node, Split},
+        Table, TableTransaction,
+    },
 };
 
-use serde::{Serialize, Deserialize};
+use rocksdb::{Error, WriteBatchWithTransaction, DB};
 
 use oh_snap::Snap;
 
@@ -16,6 +20,7 @@ use std::{
         HashMap,
     },
     iter,
+    sync::Arc,
 };
 
 pub(crate) type EntryMap<Key, Value> = HashMap<Bytes, Entry<Key, Value>>;
@@ -23,8 +28,8 @@ pub(crate) type EntryMapEntry<'a, Key, Value> = HashMapEntry<'a, Bytes, Entry<Ke
 
 pub(crate) const DEPTH: u8 = 8;
 
-#[derive(Serialize, Deserialize)]
 pub(crate) struct Store<Key: Field, Value: Field> {
+   pub(crate) db: Arc<DB>,
     maps: Snap<EntryMap<Key, Value>>,
     scope: Prefix,
 }
@@ -34,19 +39,41 @@ where
     Key: Field,
     Value: Field,
 {
-    pub fn new() -> Self {
+    pub fn new(backup_folder_path: &str) -> Self {
         Store {
-            maps: Snap::new(
-                iter::repeat_with(|| EntryMap::new())
-                    .take(1 << DEPTH)
-                    .collect(),
-            ),
+            db: Arc::new(DB::open_default(backup_folder_path).unwrap()),
+            maps: Snap::new(iter::repeat_with(EntryMap::new).take(1 << DEPTH).collect()),
             scope: Prefix::root(),
         }
     }
 
+    pub(crate) fn restore_backup(self, tables: &HashMap<String, Arc<Table<Key, Value>>>) -> (Self, HashMap<std::string::String, (&Arc<Table<Key, Value>>, TableTransaction<Key, Value>)>) {
+        let mut table_transactions = tables
+            .iter()
+            .map(|f| (f.0.clone(), (f.1, TableTransaction::new())))
+            .collect::<HashMap<String, (&Arc<Table<Key, Value>>, TableTransaction<Key, Value>)>>();
+
+        let mut iter = self.db.raw_iterator();
+
+        iter.seek_to_first();
+        while iter.valid() {
+            let (table_name, key) = bincode::deserialize::<(String, Key)>(iter.key().unwrap()).unwrap();
+            let value =
+                bincode::deserialize::<Value>(iter.value().unwrap()).unwrap();
+            let _ = table_transactions
+                .get_mut(&table_name)
+                .unwrap()
+                .1
+                .set(key, value);
+            iter.next();
+        }
+       
+        (self.clone(), table_transactions)
+    }
+
     pub fn merge(left: Self, right: Self) -> Self {
         Store {
+            db: left.db.clone(),
             maps: Snap::merge(right.maps, left.maps),
             scope: left.scope.ancestor(1),
         }
@@ -59,11 +86,13 @@ where
             let (right_maps, left_maps) = self.maps.snap(mid); // `oh-snap` stores the lowest-index elements in `left`, while `zebra` stores them in `right`, hence the swap
 
             let left = Store {
+                db: self.db.clone(),
                 maps: left_maps,
                 scope: self.scope.left(),
             };
 
             let right = Store {
+                db: self.db.clone(),
                 maps: right_maps,
                 scope: self.scope.right(),
             };
@@ -74,13 +103,30 @@ where
         }
     }
 
+    pub fn backup(&self, batch: &Batch<Key, Value>, table_name: String) -> Result<(), Error> {
+        let mut rocks_batch = WriteBatchWithTransaction::<false>::default();
+        for operation in batch.operations() {
+            match operation.action {
+                Action::Set(ref key, ref value) => {
+                    rocks_batch.put(
+                        bincode::serialize(&(&table_name, key.inner())).unwrap(),
+                        bincode::serialize(&value.inner()).unwrap(),
+                    );
+                }
+                Action::Remove(ref key) => {
+                    rocks_batch.delete(bincode::serialize(&(&table_name, key.inner())).unwrap());
+                }
+                Action::Get(..) => {}
+            }
+        }
+        self.db.write(rocks_batch)
+    }
 
     pub fn entry(&mut self, label: Label) -> EntryMapEntry<Key, Value> {
         let map = label.map().id() - self.maps.range().start;
         let hash = label.hash();
         self.maps[map].entry(hash)
     }
-
 
     #[cfg(test)]
     pub fn size(&self) -> usize {
@@ -165,7 +211,20 @@ where
             None
         }
     }
+}
 
+impl<Key, Value> Clone for Store<Key, Value>
+where
+    Key: Field,
+    Value: Field,
+{
+    fn clone(&self) -> Self {
+        Store {
+            db: self.db.clone(),
+            maps: self.maps.clone(),
+            scope: self.scope,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -184,11 +243,11 @@ mod tests {
         Key: Field,
         Value: Field,
     {
-        pub fn raw_leaves<I>(leaves: I) -> (Self, Vec<Label>)
+        pub fn raw_leaves<I>(backup_folder_path: &str, leaves: I) -> (Self, Vec<Label>)
         where
             I: IntoIterator<Item = (Key, Value)>,
         {
-            let mut store = Store::new();
+            let mut store = Store::new(backup_folder_path);
 
             let labels = leaves
                 .into_iter()
@@ -239,6 +298,7 @@ mod tests {
             }
         }
 
+        /// Fetches the label at `location` in the tree rooted at `root`.
         pub fn fetch_label_at(&mut self, root: Label, location: Prefix) -> Label {
             let mut next = root;
 
@@ -253,6 +313,7 @@ mod tests {
             next
         }
 
+        /// Asserts that the internal node at `label` has correct children.
         pub fn check_internal(&mut self, label: Label) {
             let (left, right) = self.fetch_internal(label);
 
@@ -274,6 +335,7 @@ mod tests {
             }
         }
 
+        /// Asserts that the leaf at `label` is contained in correct `location`.
         pub fn check_leaf(&mut self, label: Label, location: Prefix) {
             let (key, _) = self.fetch_leaf(label);
             if !location.contains(&Path::from(key.digest())) {
@@ -281,6 +343,10 @@ mod tests {
             }
         }
 
+        /// Asserts that the tree rooted at `root` is correct.
+        /// Correct means that:
+        /// - all internal nodes have correct children
+        /// - all leaves are contained in correct key paths
         pub fn check_tree(&mut self, root: Label) {
             fn recursion<Key, Value>(store: &mut Store<Key, Value>, label: Label, location: Prefix)
             where
@@ -370,7 +436,7 @@ mod tests {
                     for child in [left, right] {
                         references
                             .entry(child)
-                            .or_insert(HashSet::new())
+                            .or_default()
                             .insert(Reference::Internal(label));
 
                         recursion(store, child, references);
@@ -383,7 +449,7 @@ mod tests {
             for (id, held) in held.into_iter().enumerate() {
                 references
                     .entry(held)
-                    .or_insert(HashSet::new())
+                    .or_default()
                     .insert(Reference::External(id));
 
                 recursion(self, held, &mut references);
@@ -433,6 +499,7 @@ mod tests {
             collector
         }
 
+        /// Asserts that the tree rooted at `root` contains the records in `reference`.
         pub fn assert_records<I>(&mut self, root: Label, reference: I)
         where
             Key: Debug + Clone + Eq + Hash,
@@ -443,10 +510,8 @@ mod tests {
 
             let reference: HashSet<(Key, Value)> = reference.into_iter().collect();
 
-            let differences: HashSet<(Key, Value)> = reference
-                .symmetric_difference(&actual)
-                .map(|r| r.clone())
-                .collect();
+            let differences: HashSet<(Key, Value)> =
+                reference.symmetric_difference(&actual).cloned().collect();
 
             assert_eq!(differences, HashSet::new());
         }
@@ -454,7 +519,7 @@ mod tests {
 
     #[test]
     fn split() {
-        let (mut store, labels) = Store::raw_leaves([(0u32, 1u32)]);
+        let (mut store, labels) = Store::raw_leaves("test", [(0u32, 1u32)]);
 
         let path = Path::from(wrap!(0u32).digest());
         let label = labels[0];
@@ -497,7 +562,7 @@ mod tests {
     #[test]
     fn merge() {
         let leaves = (0..=8).map(|i| (i, i));
-        let (store, labels) = Store::raw_leaves(leaves);
+        let (store, labels) = Store::raw_leaves("test", leaves);
 
         let (l, r) = match store.split() {
             Split::Split(l, r) => (l, r),
@@ -536,12 +601,12 @@ mod tests {
     }
 
     #[test]
-    fn size() {
-        let store = Store::<u32, u32>::new();
+    fn test_if_size_of_store_entries_is_correct() {
+        let store = Store::<u32, u32>::new("test");
         assert_eq!(store.size(), 0);
 
         let leaves = (0..=8).map(|i| (i, i));
-        let (store, _) = Store::raw_leaves(leaves);
+        let (store, _) = Store::raw_leaves("test2", leaves);
 
         assert_eq!(store.size(), 9);
     }

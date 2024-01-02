@@ -1,3 +1,5 @@
+use std::slice;
+
 use crate::{
     common::store::Field,
     database::{
@@ -6,6 +8,9 @@ use crate::{
     },
 };
 
+use super::interact::Operation;
+
+#[derive(Debug)]
 pub struct TableResponse<Key: Field, Value: Field> {
     tid: Tid,
     batch: Batch<Key, Value>,
@@ -36,5 +41,32 @@ where
             Action::Get(None) => None,
             _ => unreachable!(),
         }
+    }
+}
+
+
+impl<'a, Key, Value> IntoIterator for &'a TableResponse<Key, Value> 
+where 
+    Key: Field,
+    Value: Field,
+{
+    type Item = &'a Operation<Key, Value>;
+    type IntoIter = slice::Iter<'a, Operation<Key, Value>>;
+
+    fn into_iter(self) -> slice::Iter<'a, Operation<Key, Value>> {
+        self.batch.operations().iter()
+    }
+}
+
+impl<'a, Key, Value> IntoIterator for &'a mut TableResponse<Key, Value> 
+where 
+    Key: Field,
+    Value: Field,
+{
+    type Item = &'a mut Operation<Key, Value>;
+    type IntoIter = slice::IterMut<'a, Operation<Key, Value>>;
+
+    fn into_iter(self) -> slice::IterMut<'a, Operation<Key, Value>> {
+        self.batch.operations_mut().iter_mut()
     }
 }

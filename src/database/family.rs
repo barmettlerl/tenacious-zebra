@@ -11,8 +11,8 @@ impl<'de, Item> Family<Item>
 where
     Item: Field,
 {
-    pub fn new() -> Self {
-        Family(Database::new())
+    pub fn new(backup_path: &str) -> Self {
+        Family(Database::new(backup_path))
     }
 
     pub fn empty_collection(&self, name: &str) -> Collection<Item> {

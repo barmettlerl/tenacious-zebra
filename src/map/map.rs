@@ -448,8 +448,8 @@ where
 
 impl<'de, Key, Value> Deserialize<'de> for Map<Key, Value>
 where
-    Key: Field + Deserialize<'de>,
-    Value: Field + Deserialize<'de>,
+    Key: Field,
+    Value: Field,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

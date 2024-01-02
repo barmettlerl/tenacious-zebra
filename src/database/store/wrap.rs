@@ -57,3 +57,9 @@ where
 }
 
 impl<Inner> Eq for Wrap<Inner> where Inner: Field {}
+
+impl<Inner: AsRef<[u8]>> AsRef<[u8]> for Wrap<Inner>  where Inner: Field{
+    fn as_ref(&self) -> &[u8] {
+        self.digest.as_ref()
+    }
+}
