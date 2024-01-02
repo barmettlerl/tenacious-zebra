@@ -104,9 +104,9 @@ where
     /// use tenaciouszebra::database::{Database, TableTransaction};
     /// let mut database: Database<String, i32> = Database::new();
     /// ```
-    pub fn new() -> Self {
+    pub fn new(path: &str) -> Self {
         Database {
-            store: Cell::new(AtomicLender::new(Store::default())),
+            store: Cell::new(AtomicLender::new(Store::new(path))),
             tables: RwLock::new(Vec::new()),
         }
     }
@@ -170,7 +170,7 @@ where
     Value: Field + Display,
 {
     fn default() -> Self {
-        Self::new()
+        Self::new("db")
     }
 }
 

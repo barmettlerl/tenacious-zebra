@@ -13,8 +13,8 @@ impl<'de, Item> Family<Item>
 where
     Item: Field + Display,
 {
-    pub fn new() -> Self {
-        Family(Database::new())
+    pub fn new(path: &str) -> Self {
+        Family(Database::new(path))
     }
 
     pub fn empty_collection(&self, name: &str) -> Collection<Item> {
