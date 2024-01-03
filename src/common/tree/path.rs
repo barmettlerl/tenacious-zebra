@@ -166,12 +166,12 @@ mod tests {
     fn ordering() {
         use Direction::{Left as L, Right as R};
 
-        assert!(&Path::from_directions(vec![R]) < &Path::from_directions(vec![L]));
+        assert!(Path::from_directions(vec![R]) < Path::from_directions(vec![L]));
 
-        assert!(&Path::from_directions(vec![R]) < &Path::from_directions(vec![R, L]));
+        assert!(Path::from_directions(vec![R]) < Path::from_directions(vec![R, L]));
 
         assert!(
-            &Path::from_directions(vec![L, R, L]) < &Path::from_directions(vec![L, L, L, L, L])
+            Path::from_directions(vec![L, R, L]) < Path::from_directions(vec![L, L, L, L, L])
         );
 
         let lesser = vec![L, L, L, R, L, L, R, R, R, R, L, R, L, R, L, L];
@@ -179,6 +179,6 @@ mod tests {
         let mut greater = lesser.clone();
         greater.push(L);
 
-        assert!(&Path::from_directions(lesser) < &Path::from_directions(greater));
+        assert!(Path::from_directions(lesser) <Path::from_directions(greater));
     }
 }

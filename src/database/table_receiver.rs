@@ -18,6 +18,7 @@ use std::collections::{
 
 const DEFAULT_WINDOW: usize = 128;
 
+
 pub struct TableReceiver<Key: Field, Value: Field> {
     cell: Cell<Key, Value>,
     root: Option<Label>,
@@ -255,7 +256,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use serde::{Serialize};
+    use serde::Serialize;
 
     use super::*;
 

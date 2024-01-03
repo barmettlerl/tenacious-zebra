@@ -393,18 +393,18 @@ mod tests {
     fn diff_empty_empty() {
         let database: Database<u32, u32> = Database::new("test");
 
-        let mut lho = database.empty_table("test");
-        let mut rho = database.empty_table("test2");
+        let lho = database.empty_table("test");
+        let rho = database.empty_table("test2");
 
-        assert_eq!(Table::diff(&mut lho, &mut rho), HashMap::new());
+        assert_eq!(Table::diff(&lho, &rho), HashMap::new());
     }
 
     #[test]
     fn diff_identity_empty() {
         let database: Database<u32, u32> = Database::new("test");
 
-        let mut lho = database.empty_table("test");
-        let mut rho = database.empty_table("test2");
+        let lho = database.empty_table("test");
+        let rho = database.empty_table("test2");
 
         let mut transaction = TableTransaction::default();
         for (key, value) in (0..1024).map(|i| (i, i)) {
@@ -413,14 +413,14 @@ mod tests {
 
         lho.execute(transaction);
 
-        let diff = Table::diff(&mut lho, &mut rho);
+        let diff = Table::diff(&lho, &rho);
 
         for key in 0..1024 {
             assert_eq!(diff[&key], (Some(key), None));
         }
 
-        let (mut lho, mut rho) = (rho, lho);
-        let diff = Table::diff(&mut lho, &mut rho);
+        let (lho, rho) = (rho, lho);
+        let diff = Table::diff(&lho, &rho);
 
         for key in 0..1024 {
             assert_eq!(diff[&key], (None, Some(key)));
@@ -431,8 +431,8 @@ mod tests {
     fn diff_identity_match() {
         let database: Database<u32, u32> = Database::new("test");
 
-        let mut lho = database.empty_table("test");
-        let mut rho = database.empty_table("test2");
+        let lho = database.empty_table("test");
+        let rho = database.empty_table("test2");
 
         let mut transaction = TableTransaction::default();
         for (key, value) in (0..1024).map(|i| (i, i)) {
@@ -448,11 +448,11 @@ mod tests {
 
         rho.execute(transaction);
 
-        let diff = Table::diff(&mut lho, &mut rho);
+        let diff = Table::diff(&lho, &rho);
         assert_eq!(diff, HashMap::new());
 
-        let (mut lho, mut rho) = (rho, lho);
-        let diff = Table::diff(&mut lho, &mut rho);
+        let (lho, rho) = (rho, lho);
+        let diff = Table::diff(&lho, &rho);
         assert_eq!(diff, HashMap::new());
     }
 
@@ -460,8 +460,8 @@ mod tests {
     fn diff_identity_successor() {
         let database: Database<u32, u32> = Database::new("test");
 
-        let mut lho = database.empty_table("test");
-        let mut rho = database.empty_table("test2");
+        let lho = database.empty_table("test");
+        let rho = database.empty_table("test2");
 
         let mut transaction = TableTransaction::default();
         for (key, value) in (0..1024).map(|i| (i, i)) {
@@ -477,14 +477,14 @@ mod tests {
 
         rho.execute(transaction);
 
-        let diff = Table::diff(&mut lho, &mut rho);
+        let diff = Table::diff(&lho, &rho);
 
         for key in 0..1024 {
             assert_eq!(diff[&key], (Some(key), Some(key + 1)));
         }
 
-        let (mut lho, mut rho) = (rho, lho);
-        let diff = Table::diff(&mut lho, &mut rho);
+        let (lho, rho) = (rho, lho);
+        let diff = Table::diff(&lho, &rho);
 
         for key in 0..1024 {
             assert_eq!(diff[&key], (Some(key + 1), Some(key)));
@@ -495,8 +495,8 @@ mod tests {
     fn diff_first_identity_match_rest_successor() {
         let database: Database<u32, u32> = Database::new("test");
 
-        let mut lho = database.empty_table("test");
-        let mut rho = database.empty_table("test2");
+        let lho = database.empty_table("test");
+        let rho = database.empty_table("test2");
 
         let mut transaction = TableTransaction::default();
         for (key, value) in (0..1024).map(|i| (i, i)) {
@@ -514,7 +514,7 @@ mod tests {
 
         rho.execute(transaction);
 
-        let diff = Table::diff(&mut lho, &mut rho);
+        let diff = Table::diff(&lho, &rho);
 
         for key in 0..1024 {
             if key == 0 {
@@ -524,8 +524,8 @@ mod tests {
             }
         }
 
-        let (mut lho, mut rho) = (rho, lho);
-        let diff = Table::diff(&mut lho, &mut rho);
+        let (lho, rho) = (rho, lho);
+        let diff = Table::diff(&lho, &rho);
 
         for key in 0..1024 {
             if key == 0 {
@@ -540,8 +540,8 @@ mod tests {
     fn diff_half_identity_match_half_successor() {
         let database: Database<u32, u32> = Database::new("test");
 
-        let mut lho = database.empty_table("test");
-        let mut rho = database.empty_table("test2");
+        let lho = database.empty_table("test");
+        let rho = database.empty_table("test2");
 
         let mut transaction = TableTransaction::default();
         for (key, value) in (0..1024).map(|i| (i, i)) {
@@ -562,7 +562,7 @@ mod tests {
 
         rho.execute(transaction);
 
-        let diff = Table::diff(&mut lho, &mut rho);
+        let diff = Table::diff(&lho, &rho);
 
         for key in 0..1024 {
             if key < 512 {
@@ -572,8 +572,8 @@ mod tests {
             }
         }
 
-        let (mut lho, mut rho) = (rho, lho);
-        let diff = Table::diff(&mut lho, &mut rho);
+        let (lho, rho) = (rho, lho);
+        let diff = Table::diff(&lho, &rho);
 
         for key in 0..1024 {
             if key < 512 {
@@ -588,8 +588,8 @@ mod tests {
     fn diff_identity_overlap() {
         let database: Database<u32, u32> = Database::new("test");
 
-        let mut lho = database.empty_table("test");
-        let mut rho = database.empty_table("test2");
+        let lho = database.empty_table("test");
+        let rho = database.empty_table("test2");
 
         let mut transaction = TableTransaction::default();
         for (key, value) in (0..1024).map(|i| (i, i)) {
@@ -606,7 +606,7 @@ mod tests {
 
         rho.execute(transaction);
 
-        let diff = Table::diff(&mut lho, &mut rho);
+        let diff = Table::diff(&lho, &rho);
 
         for key in 0..1536 {
             if key < 512 {
@@ -618,8 +618,8 @@ mod tests {
             }
         }
 
-        let (mut lho, mut rho) = (rho, lho);
-        let diff = Table::diff(&mut lho, &mut rho);
+        let (lho, rho) = (rho, lho);
+        let diff = Table::diff(&lho, &rho);
 
         for key in 0..1536 {
             if key < 512 {
@@ -647,8 +647,8 @@ mod tests {
         let mut rng = rand::thread_rng();
 
         for _ in 0..512 {
-            let mut lho = database.empty_table("test");
-            let mut rho = database.empty_table("test2");
+            let lho = database.empty_table("test");
+            let rho = database.empty_table("test2");
             let mut diff_reference = HashMap::new();
 
             let mut lho_transaction = TableTransaction::default();
@@ -696,7 +696,7 @@ mod tests {
             lho.execute(lho_transaction);
             rho.execute(rho_transaction);
 
-            assert_eq!(Table::diff(&mut lho, &mut rho), diff_reference);
+            assert_eq!(Table::diff(&lho, &rho), diff_reference);
         }
     }
 }

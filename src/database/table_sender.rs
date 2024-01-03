@@ -136,7 +136,7 @@ mod tests {
     
             let mut store = database.store.take();
             let node = match store.entry(label) {
-                Occupied(entry) => entry.get().node.clone(),
+                Occupied(entry) => (*entry.get()).node.clone(),
                 _ => unreachable!(),
             };
             database.store.restore(store);
@@ -157,17 +157,17 @@ mod tests {
 
             let mut store = database.store.take();
             let n0 = match store.entry(label0) {
-                Occupied(entry) => entry.get().node.clone(),
+                Occupied(entry) => (*entry.get()).node.clone(),
                 _ => unreachable!(),
             };
             let (n1, n2) = match n0 {
                 Node::Internal(label1, label2) => {
                     let n1 = match store.entry(label1) {
-                        Occupied(entry) => entry.get().node.clone(),
+                        Occupied(entry) => (*entry.get()).node.clone(),
                         _ => unreachable!(),
                     };
                     let n2 = match store.entry(label2) {
-                        Occupied(entry) => entry.get().node.clone(),
+                        Occupied(entry) => (*entry.get()).node.clone(),
                         _ => unreachable!(),
                     };
                     (n1, n2)

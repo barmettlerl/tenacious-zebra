@@ -1,10 +1,10 @@
 mod node;
 mod proof;
-mod vector;
+mod vector_impl;
 
 pub mod errors;
 
 use node::Node;
 
 pub use proof::Proof;
-pub use vector::Vector;
+pub use vector_impl::Vector;

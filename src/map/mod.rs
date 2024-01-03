@@ -2,12 +2,12 @@
 
 mod interact;
 
-mod map;
+mod map_impl;
 mod set;
 
 pub(crate) mod store;
 
 pub mod errors;
 
-pub use map::Map;
+pub use map_impl::Map;
 pub use set::Set;
