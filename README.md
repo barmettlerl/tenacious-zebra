@@ -4,6 +4,7 @@
 - Cheap cloning (O(1)).
 - Efficient sending to `Databases` containing similar maps (high % of key-value pairs in common)
 - Quick validation of the correctness of a tree 
+- Persistent storage of the database
 
 ---
 
