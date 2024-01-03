@@ -7,6 +7,7 @@
 - Persistent storage of the database
 
 ---
+Tenacious-zebra is based on <a href="https://github.com/Distributed-EPFL/zebra">zebra</a> and implements a concurrent and persistent database. For mor information about the inner working of zebra see <a href="https://hackmd.io/@theMaimu/B1ooi4Lph">here</a>.
 
 # Quicks Start
 
