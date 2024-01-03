@@ -1,5 +1,5 @@
 use crate::{
-    common::{data::Bytes, store::Field, tree::{Path, Prefix}},
+    common::{data::Bytes, store::Field, tree::Path},
     database::{
         errors::QueryError,
         store::{Cell, Handle, Label},
@@ -10,15 +10,13 @@ use crate::{
 use doomstack::{here, ResultExt, Top};
 
 use oh_snap::Snap;
-use std::{borrow::Borrow, collections::{hash_map::Entry::{Occupied, Vacant}, HashMap}, hash::Hash as StdHash};
+use std::{borrow::Borrow, collections::HashMap, hash::Hash as StdHash};
 
 use talk::crypto::primitives::{hash, hash::Hash};
 
 // Documentation links
 #[allow(unused_imports)]
 use crate::database::{Database, TableReceiver};
-
-use super::store::{Store, Node, Wrap};
 
 /// A map implemented using Merkle Patricia Trees.
 ///
@@ -75,12 +73,11 @@ where
     /// ```
     /// use tenaciouszebra::database::{Database, TableTransaction};
     ///
-    /// fn main() {
     ///
     ///     let mut database = Database::new("test");
     ///
     ///     // Create a new transaction.
-    ///     let mut transaction = TableTransaction::new();
+    ///     let mut transaction = TableTransaction::default();
     ///
     ///     // Set (key = 0, value = 0)
     ///     transaction.set(0, 0).unwrap();
@@ -98,7 +95,6 @@ where
     ///
     ///     let value_read = response.get(&read_key);
     ///     assert_eq!(value_read, None);
-    /// }
     /// ```
     pub fn execute(
         &self,
@@ -163,80 +159,6 @@ where
     pub fn send(&self) -> TableSender<Key, Value> {
         TableSender::from_handle(self.0.clone())
     }
-
-    fn check_internal(store: &mut Store<Key,Value>, label: Label) {
-        let (left, right) = Self::fetch_internal(store, label);
-
-        match (left, right) {
-            (Label::Empty, Label::Empty)
-            | (Label::Empty, Label::Leaf(..))
-            | (Label::Leaf(..), Label::Empty) => {
-                panic!("`check_internal`: children violate compactness")
-            }
-            _ => {}
-        }
-
-        for child in [left, right] {
-            if child != Label::Empty {
-                if let Vacant(..) = store.entry(child) {
-                    panic!("`check_internal`: child not found");
-                }
-            }
-        }
-    }
-
-    fn check_leaf(store: &mut Store<Key,Value>, label: Label, location: Prefix) {
-        let (key, _) = Self::fetch_leaf(store, label);
-        if !location.contains(&Path::from(key.digest())) {
-            panic!("`check_leaf`: leaf outside of its key path")
-        }
-    }
-
-    fn fetch_node(store: &mut Store<Key,Value>, label: Label) -> Node<Key, Value> {
-        match store.entry(label) {
-            Occupied(entry) => entry.get().node.clone(),
-            Vacant(..) => panic!("`fetch_node`: node not found"),
-        }
-    }
-
-    fn fetch_internal(store: &mut Store<Key,Value>, label: Label) -> (Label, Label) {
-        match Self::fetch_node(store, label) {
-            Node::Internal(left, right) => (left, right),
-            _ => panic!("`fetch_internal`: node not `Internal`"),
-        }
-    }
-
-    fn fetch_leaf(store: &mut Store<Key,Value>, label: Label) -> (Wrap<Key>, Wrap<Value>) {
-        match Self::fetch_node(store, label) {
-            Node::Leaf(key, value) => (key, value),
-            _ => panic!("`fetch_leaf`: node not `Leaf`"),
-        }
-    }
-
-    fn check_tree_recursion(store: &mut Store<Key, Value>, label: Label, location: Prefix)
-    {
-        match label {
-            Label::Internal(..) => {
-                Self::check_internal(store, label);
-
-                let (left, right) = Self::fetch_internal(store, label);
-                Self::check_tree_recursion(store, left, location.left());
-                Self::check_tree_recursion(store, right, location.right());
-            }
-            Label::Leaf(..) => {
-                Self::check_leaf(store, label, location);
-            }
-            Label::Empty => {}
-        }
-    }
-
-    pub(crate) fn check(&self) {
-        let mut store = self.0.cell.take();
-
-        Self::check_tree_recursion(&mut store, self.get_root(), Prefix::root());
-
-        self.0.cell.restore(store);
-    }
 }
 
 impl<Key, Value> Clone for Table<Key, Value>
@@ -252,11 +174,15 @@ where
 #[cfg(test)]
 mod tests {
 
+    use crate::{database::store::{Store, Wrap, Node}, common::tree::Prefix};
+
     use super::*;
 
     use rand::seq::IteratorRandom;
 
     use std::{fmt::Debug, hash::Hash, collections::HashMap};
+
+    use std::collections::hash_map::Entry::{Occupied, Vacant};
 
     impl<Key, Value> Table<Key, Value>
     where
@@ -290,6 +216,80 @@ mod tests {
             records
         }
 
+        fn check_internal(store: &mut Store<Key,Value>, label: Label) {
+            let (left, right) = Self::fetch_internal(store, label);
+    
+            match (left, right) {
+                (Label::Empty, Label::Empty)
+                | (Label::Empty, Label::Leaf(..))
+                | (Label::Leaf(..), Label::Empty) => {
+                    panic!("`check_internal`: children violate compactness")
+                }
+                _ => {}
+            }
+    
+            for child in [left, right] {
+                if child != Label::Empty {
+                    if let Vacant(..) = store.entry(child) {
+                        panic!("`check_internal`: child not found");
+                    }
+                }
+            }
+        }
+    
+        fn check_leaf(store: &mut Store<Key,Value>, label: Label, location: Prefix) {
+            let (key, _) = Self::fetch_leaf(store, label);
+            if !location.contains(&Path::from(key.digest())) {
+                panic!("`check_leaf`: leaf outside of its key path")
+            }
+        }
+    
+        fn fetch_node(store: &mut Store<Key,Value>, label: Label) -> Node<Key, Value> {
+            match store.entry(label) {
+                Occupied(entry) => entry.get().node.clone(),
+                Vacant(..) => panic!("`fetch_node`: node not found"),
+            }
+        }
+    
+        fn fetch_internal(store: &mut Store<Key,Value>, label: Label) -> (Label, Label) {
+            match Self::fetch_node(store, label) {
+                Node::Internal(left, right) => (left, right),
+                _ => panic!("`fetch_internal`: node not `Internal`"),
+            }
+        }
+    
+        fn fetch_leaf(store: &mut Store<Key,Value>, label: Label) -> (Wrap<Key>, Wrap<Value>) {
+            match Self::fetch_node(store, label) {
+                Node::Leaf(key, value) => (key, value),
+                _ => panic!("`fetch_leaf`: node not `Leaf`"),
+            }
+        }
+    
+        fn check_tree_recursion(store: &mut Store<Key, Value>, label: Label, location: Prefix)
+        {
+            match label {
+                Label::Internal(..) => {
+                    Self::check_internal(store, label);
+    
+                    let (left, right) = Self::fetch_internal(store, label);
+                    Self::check_tree_recursion(store, left, location.left());
+                    Self::check_tree_recursion(store, right, location.right());
+                }
+                Label::Leaf(..) => {
+                    Self::check_leaf(store, label, location);
+                }
+                Label::Empty => {}
+            }
+        }
+    
+        pub(crate) fn check(&self) {
+            let mut store = self.0.cell.take();
+    
+            Self::check_tree_recursion(&mut store, self.get_root(), Prefix::root());
+    
+            self.0.cell.restore(store);
+        }
+
     }
 
     #[test]
@@ -311,7 +311,7 @@ mod tests {
         let database: Database<u32, u32> = Database::new("test");
         let table = database.empty_table("test");
 
-        let mut transaction = TableTransaction::new();
+        let mut transaction = TableTransaction::default();
         for (key, value) in (0..1024).map(|i| (i, i)) {
             transaction.set(key, value).unwrap();
         }
@@ -332,7 +332,7 @@ mod tests {
         let database: Database<u32, u32> = Database::new("test");
         let table = database.empty_table("test");
 
-        let mut transaction = TableTransaction::new();
+        let mut transaction = TableTransaction::default();
         for (key, value) in (0..1024).map(|i| (i, i)) {
             transaction.set(key, value).unwrap();
         }
@@ -353,7 +353,7 @@ mod tests {
         let database: Database<u32, u32> = Database::new("test");
         let table = database.empty_table("test");
 
-        let mut transaction = TableTransaction::new();
+        let mut transaction = TableTransaction::default();
         for (key, value) in (0..1024).map(|i| (i, i)) {
             transaction.set(key, value).unwrap();
         }
@@ -374,7 +374,7 @@ mod tests {
         let database: Database<u32, u32> = Database::new("test");
         let table = database.empty_table("test");
 
-        let mut transaction = TableTransaction::new();
+        let mut transaction = TableTransaction::default();
         for (key, value) in (0..1024).map(|i| (i, i)) {
             transaction.set(key, value).unwrap();
         }
@@ -406,7 +406,7 @@ mod tests {
         let mut lho = database.empty_table("test");
         let mut rho = database.empty_table("test2");
 
-        let mut transaction = TableTransaction::new();
+        let mut transaction = TableTransaction::default();
         for (key, value) in (0..1024).map(|i| (i, i)) {
             transaction.set(key, value).unwrap();
         }
@@ -434,14 +434,14 @@ mod tests {
         let mut lho = database.empty_table("test");
         let mut rho = database.empty_table("test2");
 
-        let mut transaction = TableTransaction::new();
+        let mut transaction = TableTransaction::default();
         for (key, value) in (0..1024).map(|i| (i, i)) {
             transaction.set(key, value).unwrap();
         }
 
         lho.execute(transaction);
 
-        let mut transaction = TableTransaction::new();
+        let mut transaction = TableTransaction::default();
         for (key, value) in (0..1024).map(|i| (i, i)) {
             transaction.set(key, value).unwrap();
         }
@@ -463,14 +463,14 @@ mod tests {
         let mut lho = database.empty_table("test");
         let mut rho = database.empty_table("test2");
 
-        let mut transaction = TableTransaction::new();
+        let mut transaction = TableTransaction::default();
         for (key, value) in (0..1024).map(|i| (i, i)) {
             transaction.set(key, value).unwrap();
         }
 
         lho.execute(transaction);
 
-        let mut transaction = TableTransaction::new();
+        let mut transaction = TableTransaction::default();
         for (key, value) in (0..1024).map(|i| (i, i + 1)) {
             transaction.set(key, value).unwrap();
         }
@@ -498,14 +498,14 @@ mod tests {
         let mut lho = database.empty_table("test");
         let mut rho = database.empty_table("test2");
 
-        let mut transaction = TableTransaction::new();
+        let mut transaction = TableTransaction::default();
         for (key, value) in (0..1024).map(|i| (i, i)) {
             transaction.set(key, value).unwrap();
         }
 
         lho.execute(transaction);
 
-        let mut transaction = TableTransaction::new();
+        let mut transaction = TableTransaction::default();
         transaction.set(0, 0).unwrap();
 
         for (key, value) in (1..1024).map(|i| (i, i + 1)) {
@@ -543,14 +543,14 @@ mod tests {
         let mut lho = database.empty_table("test");
         let mut rho = database.empty_table("test2");
 
-        let mut transaction = TableTransaction::new();
+        let mut transaction = TableTransaction::default();
         for (key, value) in (0..1024).map(|i| (i, i)) {
             transaction.set(key, value).unwrap();
         }
 
         lho.execute(transaction);
 
-        let mut transaction = TableTransaction::new();
+        let mut transaction = TableTransaction::default();
 
         for (key, value) in (0..512).map(|i| (i, i)) {
             transaction.set(key, value).unwrap();
@@ -591,14 +591,14 @@ mod tests {
         let mut lho = database.empty_table("test");
         let mut rho = database.empty_table("test2");
 
-        let mut transaction = TableTransaction::new();
+        let mut transaction = TableTransaction::default();
         for (key, value) in (0..1024).map(|i| (i, i)) {
             transaction.set(key, value).unwrap();
         }
 
         lho.execute(transaction);
 
-        let mut transaction = TableTransaction::new();
+        let mut transaction = TableTransaction::default();
 
         for (key, value) in (512..1536).map(|i| (i, i)) {
             transaction.set(key, value).unwrap();
@@ -651,8 +651,8 @@ mod tests {
             let mut rho = database.empty_table("test2");
             let mut diff_reference = HashMap::new();
 
-            let mut lho_transaction = TableTransaction::new();
-            let mut rho_transaction = TableTransaction::new();
+            let mut lho_transaction = TableTransaction::default();
+            let mut rho_transaction = TableTransaction::default();
 
             for key in 0..512 {
                 let lho_set = SETS.iter().choose(&mut rng).unwrap();

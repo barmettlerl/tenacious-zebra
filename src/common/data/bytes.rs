@@ -13,9 +13,9 @@ impl From<Hash> for Bytes {
     }
 }
 
-impl Into<Hash> for Bytes {
-    fn into(self) -> Hash {
-        Hash::from_bytes(self.0)
+impl From<Bytes> for Hash {
+    fn from(val: Bytes) -> Self {
+        Hash::from_bytes(val.0)
     }
 }
 

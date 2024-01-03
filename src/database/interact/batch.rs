@@ -86,9 +86,7 @@ mod tests {
         {
             let reference: HashMap<Key, Option<Value>> = reference.into_iter().collect();
 
-            let preimage: HashMap<Bytes, Key> = reference
-                .iter()
-                .map(|(k, _)| (Bytes::from(hash::hash(k).unwrap()), k.clone()))
+            let preimage: HashMap<Bytes, Key> = reference.keys().map(|k| (Bytes::from(hash::hash(k).unwrap()), k.clone()))
                 .collect();
 
             let actual: HashSet<(Bytes, Option<Value>)> =

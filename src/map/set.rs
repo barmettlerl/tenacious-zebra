@@ -20,6 +20,15 @@ pub struct Set<Item: Field>(
     Map<Item, ()>
 );
 
+impl<Item> Default for Set<Item>
+where
+    Item: Field,
+ {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<Item> Set<Item>
 where
     Item: Field,

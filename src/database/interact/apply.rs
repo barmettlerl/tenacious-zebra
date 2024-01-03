@@ -713,7 +713,7 @@ mod tests {
                             remove!(key)
                         }
                     } else {
-                        get_reference.insert(key, record_reference.get(&key).map(|value| *value));
+                        get_reference.insert(key, record_reference.get(&key).copied());
                         get!(key)
                     }
                 })
@@ -904,10 +904,8 @@ mod tests {
         let mut rng = rand::thread_rng();
 
         for round in 0..32 {
-            for (record_reference, root) in vec![
-                (&mut first_record_reference, &mut first_root),
-                (&mut second_record_reference, &mut second_root),
-            ] {
+            for (record_reference, root) in [(&mut first_record_reference, &mut first_root),
+                (&mut second_record_reference, &mut second_root)] {
                 let keys = (0..1024).choose_multiple(&mut rng, 128);
                 let mut get_reference = HashMap::new();
 
@@ -924,7 +922,7 @@ mod tests {
                             }
                         } else {
                             get_reference
-                                .insert(key, record_reference.get(&key).map(|value| *value));
+                                .insert(key, record_reference.get(&key).copied());
                             get!(key)
                         }
                     })

@@ -152,6 +152,16 @@ pub struct Map<Key: Field, Value: Field> {
     root: Lender<Node<Key, Value>>,
 }
 
+impl<Key, Value> Default for Map<Key, Value>
+where
+    Key: Field,
+    Value: Field,
+ {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<Key, Value> Map<Key, Value>
 where
     Key: Field,
@@ -458,7 +468,7 @@ where
         let root = Node::deserialize(deserializer)?; // Deserializes and computes node hashes
 
         store::check(&root) // Checks correctness of tree topology
-            .map_err(|err| DeError::custom(err))?;
+            .map_err(DeError::custom)?;
 
         Ok(Map {
             root: Lender::new(root),
@@ -528,8 +538,7 @@ mod tests {
             let reference: HashSet<(Key, Value)> = reference.into_iter().collect();
 
             let differences: HashSet<(Key, Value)> = reference
-                .symmetric_difference(&actual)
-                .map(|r| r.clone())
+                .symmetric_difference(&actual).cloned()
                 .collect();
 
             assert_eq!(differences, HashSet::new());

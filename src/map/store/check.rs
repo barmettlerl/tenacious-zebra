@@ -64,5 +64,5 @@ where
     Key: Field,
     Value: Field,
 {
-    recursion(&node, Prefix::root())
+    recursion(node, Prefix::root())
 }

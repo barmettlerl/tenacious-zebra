@@ -61,9 +61,9 @@ impl From<Hash> for Path {
     }
 }
 
-impl Into<Bytes> for Path {
-    fn into(self) -> Bytes {
-        self.0
+impl From<Path> for Bytes {
+    fn from(val: Path) -> Self {
+        val.0
     }
 }
 

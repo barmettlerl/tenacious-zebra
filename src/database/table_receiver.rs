@@ -255,7 +255,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use serde::{Serialize, Deserialize};
+    use serde::{Serialize};
 
     use super::*;
 
@@ -307,7 +307,7 @@ mod tests {
         Value: Field,
     {
         pub(crate) fn held(&self) -> Vec<Label> {
-            self.held.iter().map(|label| *label).collect()
+            self.held.iter().copied().collect()
         }
     }
 

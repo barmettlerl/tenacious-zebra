@@ -31,7 +31,15 @@ where
     Key: Field,
     Value: Field,
 {
-    pub fn new() -> Self {
+    pub fn new(tid: Tid, operations: Vec<Operation<Key, Value>>, paths: HashSet<Path>) -> Self {
+        TableTransaction {
+            tid,
+            operations,
+            paths,
+        }
+    }
+
+    pub fn default() -> Self {
         TableTransaction {
             tid: TID.fetch_add(1, Ordering::Relaxed),
             operations: Vec::new(),

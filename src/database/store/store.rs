@@ -25,6 +25,7 @@ use std::{
 
 pub(crate) type EntryMap<Key, Value> = HashMap<Bytes, Entry<Key, Value>>;
 pub(crate) type EntryMapEntry<'a, Key, Value> = HashMapEntry<'a, Bytes, Entry<Key, Value>>;
+pub(crate) type BackupRestore<'a, Key, Value> = (Store<Key, Value>, HashMap<std::string::String, (&'a Arc<Table<Key, Value>>, TableTransaction<Key, Value>)>);
 
 pub(crate) const DEPTH: u8 = 8;
 
@@ -47,10 +48,10 @@ where
         }
     }
 
-    pub(crate) fn restore_backup(self, tables: &HashMap<String, Arc<Table<Key, Value>>>) -> (Self, HashMap<std::string::String, (&Arc<Table<Key, Value>>, TableTransaction<Key, Value>)>) {
+    pub(crate) fn restore_backup(self, tables: &HashMap<String, Arc<Table<Key, Value>>>) -> BackupRestore<Key, Value> {
         let mut table_transactions = tables
             .iter()
-            .map(|f| (f.0.clone(), (f.1, TableTransaction::new())))
+            .map(|f| (f.0.clone(), (f.1, TableTransaction::default())))
             .collect::<HashMap<String, (&Arc<Table<Key, Value>>, TableTransaction<Key, Value>)>>();
 
         let mut iter = self.db.raw_iterator();

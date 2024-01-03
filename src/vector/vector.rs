@@ -134,7 +134,7 @@ where
                 };
             }
 
-            layer_index = layer_index / 2;
+            layer_index /= 2;
         }
 
         Ok(())
@@ -181,7 +181,7 @@ where
                 proof.push(sibling);
             }
 
-            layer_index = layer_index / 2;
+            layer_index /= 2;
         }
 
         let siblings = if PACKING == 1 {
@@ -223,7 +223,7 @@ where
         D: Deserializer<'de>,
     {
         let items = Vec::<Item>::deserialize(deserializer)?;
-        Ok(Vector::new(items).map_err(|err| DeError::custom(err))?)
+        Vector::new(items).map_err(DeError::custom)
     }
 }
 

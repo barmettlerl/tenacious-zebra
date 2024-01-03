@@ -106,11 +106,9 @@ mod tests {
                 let result = apply::apply(store, Label::Empty, batch);
                 store = result.0;
                 roots.push(result.1);
-            } else {
-                if let Some(index) = (0..roots.len()).choose(&mut rng) {
-                    drop(&mut store, roots[index]);
-                    roots.remove(index);
-                }
+            } else if let Some(index) = (0..roots.len()).choose(&mut rng) {
+                drop(&mut store, roots[index]);
+                roots.remove(index);
             }
 
             store.check_leaks(roots.clone());

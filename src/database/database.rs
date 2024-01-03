@@ -1,6 +1,6 @@
 use std::{sync::{RwLock, Arc}, path::Path, io::{Write, Read}, collections::HashMap};
 use crate::{
-    common::{store::Field},
+    common::store::Field,
     database::{
         store::{Cell, Store},
         Table, TableReceiver,
@@ -42,40 +42,38 @@ use talk::sync::lenders::AtomicLender;
 ///
 /// use tenaciouszebra::database::{Database, Table, TableTransaction, TableResponse, Query};
 ///
-/// fn main() {
 ///     // Type inference lets us omit an explicit type signature (which
 ///     // would be `Database<String, integer>` in this example).
 ///     let database = Database::new("test");
 ///
 ///     // We create a new transaction. See [`Transaction`] for more details.
-///     let mut modify = TableTransaction::new();
+///     let mut modify = TableTransaction::default();
 ///     modify.set(String::from("Alice"), 42).unwrap();
 ///
 ///     let mut table = database.empty_table("test");
 ///     let _ = table.execute(modify);
 ///
-///     let mut read = TableTransaction::new();
+///     let mut read = TableTransaction::default();
 ///     let query_key = read.get("Alice".to_string()).unwrap();
 ///     let response = table.execute(read);
 ///
 ///     assert_eq!(response.get(&query_key), Some(&42));
 ///
 ///     // Let's remove "Alice" and set "Bob".
-///     let mut modify = TableTransaction::new();
+///     let mut modify = TableTransaction::default();
 ///     modify.remove("Alice".to_string()).unwrap();
 ///     modify.set("Bob".to_string(), 23).unwrap();
 ///
 ///     // Ignore the response (modify only)
 ///     let _ = table.execute(modify);
 ///
-///     let mut read = TableTransaction::new();
+///     let mut read = TableTransaction::default();
 ///     let query_key_alice = read.get("Alice".to_string()).unwrap();
 ///     let query_key_bob = read.get("Bob".to_string()).unwrap();
 ///     let response = table.execute(read);
 ///
 ///     assert_eq!(response.get(&query_key_alice), None);
 ///     assert_eq!(response.get(&query_key_bob), Some(&23));
-/// }
 /// ```
 
 pub struct Database<Key, Value>
@@ -233,7 +231,7 @@ mod tests {
 
     use super::*;
 
-    use crate::{database::{store::Label, TableTransaction}, common::data};
+    use crate::database::{store::Label, TableTransaction};
 
     impl<Key, Value> Database<Key, Value>
     where
@@ -245,7 +243,7 @@ mod tests {
             I: IntoIterator<Item = (Key, Value)>,
         {
             let table = self.empty_table("test");
-            let mut transaction = TableTransaction::new();
+            let mut transaction = TableTransaction::default();
 
             for (key, value) in records {
                 transaction.set(key, value).unwrap();
@@ -299,7 +297,7 @@ mod tests {
         Database::test_database(|database| {
             let table = database.table_with_records((0..4).map(|i| (i, i)));
 
-            let mut transaction = TableTransaction::new();
+            let mut transaction = TableTransaction::default();
             for i in 2..4 {
                 transaction.set(i, i + 1).unwrap();
             }
@@ -315,7 +313,7 @@ mod tests {
             let table = database.table_with_records((0..256).map(|i| (i, i)));
             let table_clone = table.clone();
     
-            let mut transaction = TableTransaction::new();
+            let mut transaction = TableTransaction::default();
             for i in 128..256 {
                 transaction.set(i, i + 1).unwrap();
             }
@@ -353,7 +351,7 @@ mod tests {
                 assert_eq!(tables[0].root(), table.root())
             }
     
-            let mut transaction = TableTransaction::new();
+            let mut transaction = TableTransaction::default();
             for i in 128..256 {
                 transaction.set(i, i + 1).unwrap();
             }
@@ -377,14 +375,14 @@ mod tests {
             let table1 = database1.empty_table("test1");
             let table2 = database1.empty_table("test2");
     
-            let mut transaction = TableTransaction::new();
+            let mut transaction = TableTransaction::default();
             for i in 0..256 {
                 transaction.set(i, i + 1).unwrap();
             }
     
             table1.execute(transaction);
     
-            let mut transaction = TableTransaction::new();
+            let mut transaction = TableTransaction::default();
     
             for i in 0..128 {
                 transaction.set(i, i + 1).unwrap();
@@ -418,14 +416,14 @@ mod tests {
 
             let table1 = database1.empty_table("test1");
     
-            let mut transaction = TableTransaction::new();
+            let mut transaction = TableTransaction::default();
             for i in 0..4 {
                 transaction.set(i, i + 1).unwrap();
             }
     
             table1.execute(transaction);
 
-            let mut transaction = TableTransaction::new();
+            let mut transaction = TableTransaction::default();
             transaction.remove(0).unwrap();
             transaction.remove(1).unwrap();
 

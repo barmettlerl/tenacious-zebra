@@ -72,6 +72,6 @@ where
         D: Deserializer<'de>,
     {
         let inner = Inner::deserialize(deserializer)?;
-        Wrap::new(inner).map_err(|err| DeError::custom(err))
+        Wrap::new(inner).map_err(DeError::custom)
     }
 }

@@ -11,8 +11,12 @@ impl<Item> CollectionTransaction<Item>
 where
     Item: Field,
 {
-    pub fn new() -> Self {
-        CollectionTransaction(TableTransaction::new())
+    pub fn new(table_transaction: TableTransaction<Item, ()>) -> Self {
+        CollectionTransaction(table_transaction)
+    }
+
+    pub fn default() -> Self {
+        CollectionTransaction(TableTransaction::default())
     }
 
     pub fn contains(&mut self, item: Item) -> Result<Query, Top<QueryError>> {

@@ -142,19 +142,19 @@ where
     }
 
     pub fn left(&self) -> &Node<Key, Value> {
-        &*self.children.left
+        &self.children.left
     }
 
     pub fn left_mut(&mut self) -> &mut Node<Key, Value> {
-        &mut *self.children.left
+        &mut self.children.left
     }
 
     pub fn right(&self) -> &Node<Key, Value> {
-        &*self.children.right
+        &self.children.right
     }
 
     pub fn right_mut(&mut self) -> &mut Node<Key, Value> {
-        &mut *self.children.right
+        &mut self.children.right
     }
 }
 
@@ -174,7 +174,7 @@ where
 
     pub(crate) fn raw(hash: Bytes, key: Wrap<Key>, value: Wrap<Value>) -> Self {
         Leaf {
-            hash: hash,
+            hash,
             fields: Fields { key, value },
         }
     }
