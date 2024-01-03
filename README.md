@@ -31,6 +31,11 @@
     println!(response.get(&query_key).unwrap());
 ```
 
+# See docs
+```bash
+cargo doc --open
+```
+
 # Run tests
 Because we have a concurrent and persistent database, the test interfere with each other. To avoid this, we run the tests with only one thread.
 ```bash
