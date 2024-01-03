@@ -31,6 +31,13 @@ where
     Key: Field,
     Value: Field,
 {
+    fn new() -> Self {
+        TableTransaction {
+            tid: TID.fetch_add(1, Ordering::Relaxed),
+            operations: Vec::new(),
+            paths: HashSet::new(),
+        }
+    }
 
     pub fn get(&mut self, key: Key) -> Result<Query, Top<QueryError>> {
         let operation = Operation::<Key, Value>::get(key).pot(QueryError::HashError, here!())?;
@@ -75,17 +82,3 @@ where
     }
 }
 
-
-impl<Key, Value> Default for TableTransaction<Key, Value>
-where
-    Key: Field,
-    Value: Field,
-{
-    fn default() -> Self {
-        TableTransaction {
-            tid: TID.fetch_add(1, Ordering::Relaxed),
-            operations: Vec::new(),
-            paths: HashSet::new(),
-        }
-    }
-}
