@@ -29,8 +29,8 @@ where
     }
 
     pub fn diff(
-        lho: &mut Collection<Item>,
-        rho: &mut Collection<Item>,
+        lho: &Collection<Item>,
+        rho: &Collection<Item>,
     ) -> (HashSet<Item>, HashSet<Item>)
     where
         Item: Clone + Eq + StdHash,

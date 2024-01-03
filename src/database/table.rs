@@ -57,10 +57,6 @@ where
         self.0.commit()
     }
 
-    pub(crate) fn get_root(&self) -> Label {
-        *self.0.root.read().unwrap()
-    }
-
     pub(crate) fn get_name(&self) -> String {
         self.1.clone()
     }
@@ -203,6 +199,10 @@ mod tests {
             let mut store = self.0.cell.take();
             store.assert_records(*self.0.root.read().unwrap(), reference);
             self.0.cell.restore(store);
+        }
+
+        pub(crate) fn get_root(&self) -> Label {
+            *self.0.root.read().unwrap()
         }
 
         pub fn collect_records(&self) -> HashMap<Key, Value>

@@ -78,31 +78,19 @@ where
     }
 
     pub fn is_empty(&self) -> bool {
-        match self {
-            Node::Empty => true,
-            _ => false,
-        }
+        matches!(self, Node::Empty)
     }
 
     pub fn is_internal(&self) -> bool {
-        match self {
-            Node::Internal(_) => true,
-            _ => false,
-        }
+        matches!(self, Node::Internal(_))
     }
 
     pub fn is_leaf(&self) -> bool {
-        match self {
-            Node::Leaf(_) => true,
-            _ => false,
-        }
+        matches!(self, Node::Leaf(_))
     }
 
     pub fn is_stub(&self) -> bool {
-        match self {
-            Node::Stub(_) => true,
-            _ => false,
-        }
+        matches!(self, Node::Stub(_))
     }
 }
 

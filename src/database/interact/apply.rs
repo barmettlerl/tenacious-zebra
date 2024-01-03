@@ -75,14 +75,13 @@ fn branch<Key, Value>(
     depth: u8,
     batch: Batch<Key, Value>,
     chunk: Chunk,
-    left: Entry<Key, Value>,
-    right: Entry<Key, Value>,
+    (left, right): (Entry<Key, Value>, Entry<Key, Value>),
 ) -> (Store<Key, Value>, Batch<Key, Value>, Label)
 where
     Key: Field,
     Value: Field,
 {
-    let preserve_branches = preserve
+    let preserve_branches: bool = preserve
         || if let Some(original) = original {
             original.references.multiple()
         } else {
@@ -234,8 +233,7 @@ where
             depth,
             batch,
             chunk,
-            Entry::empty(),
-            Entry::empty(),
+            (Entry::empty(), Entry::empty())
         ),
 
         // Node already exists and we only have one operation to do
@@ -275,7 +273,7 @@ where
                 (Entry::empty(), target)
             };
 
-            branch(store, None, preserve, depth, batch, chunk, left, right)
+            branch(store, None, preserve, depth, batch, chunk, (left, right))
         }
 
         // If we are at an internal node
@@ -290,8 +288,7 @@ where
                 depth,
                 batch,
                 chunk,
-                left,
-                right,
+                (left, right)
             )
         }
     }

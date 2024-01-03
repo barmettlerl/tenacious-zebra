@@ -15,10 +15,6 @@ where
         CollectionTransaction(table_transaction)
     }
 
-    pub fn default() -> Self {
-        CollectionTransaction(TableTransaction::default())
-    }
-
     pub fn contains(&mut self, item: Item) -> Result<Query, Top<QueryError>> {
         self.0.get(item)
     }
@@ -29,5 +25,14 @@ where
 
     pub fn remove(&mut self, item: Item) -> Result<(), Top<QueryError>> {
         self.0.remove(item)
+    }
+}
+
+impl<Item> Default for CollectionTransaction<Item>
+where
+    Item: Field,
+{
+    fn default() -> Self {
+        CollectionTransaction(TableTransaction::default())
     }
 }

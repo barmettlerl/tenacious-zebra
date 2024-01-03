@@ -7,7 +7,7 @@ use crate::{
 #[derive(Clone)]
 pub struct Family<Item: Field>(pub(crate) Database<Item, ()>);
 
-impl<'de, Item> Family<Item>
+impl<Item> Family<Item>
 where
     Item: Field,
 {

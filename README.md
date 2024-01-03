@@ -31,3 +31,8 @@
     println!(response.get(&query_key).unwrap());
 ```
 
+# Run tests
+Because we have a concurrent and persistent database, the test interfere with each other. To avoid this, we run the tests with only one thread.
+```bash
+cargo test --no-threads=1
+```

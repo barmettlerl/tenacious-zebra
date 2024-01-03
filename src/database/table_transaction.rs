@@ -31,21 +31,6 @@ where
     Key: Field,
     Value: Field,
 {
-    pub fn new(tid: Tid, operations: Vec<Operation<Key, Value>>, paths: HashSet<Path>) -> Self {
-        TableTransaction {
-            tid,
-            operations,
-            paths,
-        }
-    }
-
-    pub fn default() -> Self {
-        TableTransaction {
-            tid: TID.fetch_add(1, Ordering::Relaxed),
-            operations: Vec::new(),
-            paths: HashSet::new(),
-        }
-    }
 
     pub fn get(&mut self, key: Key) -> Result<Query, Top<QueryError>> {
         let operation = Operation::<Key, Value>::get(key).pot(QueryError::HashError, here!())?;
@@ -87,5 +72,20 @@ where
 
     pub(crate) fn finalize(self) -> (Tid, Batch<Key, Value>) {
         (self.tid, Batch::new(self.operations))
+    }
+}
+
+
+impl<Key, Value> Default for TableTransaction<Key, Value>
+where
+    Key: Field,
+    Value: Field,
+{
+    fn default() -> Self {
+        TableTransaction {
+            tid: TID.fetch_add(1, Ordering::Relaxed),
+            operations: Vec::new(),
+            paths: HashSet::new(),
+        }
     }
 }

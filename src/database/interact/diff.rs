@@ -8,6 +8,8 @@ use std::collections::{
     LinkedList,
 };
 
+type Collector<Key, Value> = LinkedList<(Wrap<Key>, Wrap<Value>)>;
+
 fn get<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Node<Key, Value>
 where
     Key: Field,
@@ -32,8 +34,8 @@ pub(crate) fn branch<Key, Value>(
     rho_recursion: Option<(Label, Label)>,
 ) -> (
     Store<Key, Value>,
-    LinkedList<(Wrap<Key>, Wrap<Value>)>,
-    LinkedList<(Wrap<Key>, Wrap<Value>)>,
+    Collector<Key, Value>,
+    Collector<Key, Value>,
 )
 where
     Key: Field,
@@ -109,8 +111,8 @@ pub(crate) fn recur<Key, Value>(
     rho_node: Option<Label>,
 ) -> (
     Store<Key, Value>,
-    LinkedList<(Wrap<Key>, Wrap<Value>)>,
-    LinkedList<(Wrap<Key>, Wrap<Value>)>,
+    Collector<Key, Value>,
+    Collector<Key, Value>,
 )
 where
     Key: Field,
@@ -162,8 +164,8 @@ pub(crate) fn diff<Key, Value>(
     rho_root: Label,
 ) -> (
     Store<Key, Value>,
-    LinkedList<(Wrap<Key>, Wrap<Value>)>,
-    LinkedList<(Wrap<Key>, Wrap<Value>)>,
+    Collector<Key, Value>,
+    Collector<Key, Value>,
 )
 where
     Key: Field,
